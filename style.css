@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  background: black;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+canvas {
+  display: block;
+}
+
+input {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  padding: 8px 12px;
+}
