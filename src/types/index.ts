@@ -29,6 +29,25 @@ export interface Enemy extends Entity {
   checkCollision(player: { position: Position; radius: number }): boolean;
 }
 
+export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed';
+
+export interface WaveEnemyConfig {
+  type: EnemyType;
+  count: number;
+  spawnInterval: number;
+  speedMin: number;
+  speedMax: number;
+}
+
+export interface WaveConfig {
+  wave: number;
+  enemies: WaveEnemyConfig[];
+}
+
+export interface WavesData {
+  waves: WaveConfig[];
+}
+
 export enum GameState {
   PLAYING,
   GAME_OVER,

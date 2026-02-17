@@ -1,0 +1,264 @@
+{
+  "waves": [
+    {
+      "wave": 1,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 1,
+          "spawnInterval": 1200,
+          "speedMin": 55,
+          "speedMax": 75
+        },
+        {
+          "type": "zigzag",
+          "count": 1,
+          "spawnInterval": 2000,
+          "speedMin": 40,
+          "speedMax": 60
+        },
+        {
+          "type": "tank",
+          "count": 1,
+          "spawnInterval": 4000,
+          "speedMin": 20,
+          "speedMax": 30
+        },
+        {
+          "type": "spawner",
+          "count": 1,
+          "spawnInterval": 6000,
+          "speedMin": 45,
+          "speedMax": 55
+        },
+        {
+          "type": "speed",
+          "count": 1,
+          "spawnInterval": 2500,
+          "speedMin": 90,
+          "speedMax": 130
+        }
+      ]
+    },
+    {
+      "wave": 2,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 8,
+          "spawnInterval": 2500,
+          "speedMin": 35,
+          "speedMax": 50
+        }
+      ]
+    },
+    {
+      "wave": 3,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 6,
+          "spawnInterval": 2500,
+          "speedMin": 35,
+          "speedMax": 50
+        },
+        {
+          "type": "zigzag",
+          "count": 3,
+          "spawnInterval": 4000,
+          "speedMin": 25,
+          "speedMax": 40
+        }
+      ]
+    },
+    {
+      "wave": 4,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 8,
+          "spawnInterval": 2000,
+          "speedMin": 40,
+          "speedMax": 55
+        },
+        {
+          "type": "zigzag",
+          "count": 5,
+          "spawnInterval": 3500,
+          "speedMin": 30,
+          "speedMax": 45
+        }
+      ]
+    },
+    {
+      "wave": 5,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 6,
+          "spawnInterval": 2000,
+          "speedMin": 40,
+          "speedMax": 55
+        },
+        {
+          "type": "speed",
+          "count": 4,
+          "spawnInterval": 3000,
+          "speedMin": 70,
+          "speedMax": 100
+        }
+      ]
+    },
+    {
+      "wave": 6,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 5,
+          "spawnInterval": 2500,
+          "speedMin": 40,
+          "speedMax": 55
+        },
+        {
+          "type": "tank",
+          "count": 3,
+          "spawnInterval": 5000,
+          "speedMin": 15,
+          "speedMax": 25
+        }
+      ]
+    },
+    {
+      "wave": 7,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 8,
+          "spawnInterval": 2000,
+          "speedMin": 45,
+          "speedMax": 60
+        },
+        {
+          "type": "zigzag",
+          "count": 4,
+          "spawnInterval": 3000,
+          "speedMin": 30,
+          "speedMax": 45
+        },
+        {
+          "type": "spawner",
+          "count": 1,
+          "spawnInterval": 8000,
+          "speedMin": 35,
+          "speedMax": 45
+        }
+      ]
+    },
+    {
+      "wave": 8,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 10,
+          "spawnInterval": 1800,
+          "speedMin": 45,
+          "speedMax": 65
+        },
+        {
+          "type": "zigzag",
+          "count": 5,
+          "spawnInterval": 3000,
+          "speedMin": 35,
+          "speedMax": 50
+        },
+        {
+          "type": "speed",
+          "count": 4,
+          "spawnInterval": 3500,
+          "speedMin": 80,
+          "speedMax": 110
+        },
+        {
+          "type": "tank",
+          "count": 2,
+          "spawnInterval": 6000,
+          "speedMin": 18,
+          "speedMax": 28
+        }
+      ]
+    },
+    {
+      "wave": 9,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 8,
+          "spawnInterval": 1500,
+          "speedMin": 50,
+          "speedMax": 70
+        },
+        {
+          "type": "zigzag",
+          "count": 6,
+          "spawnInterval": 2500,
+          "speedMin": 35,
+          "speedMax": 55
+        },
+        {
+          "type": "spawner",
+          "count": 2,
+          "spawnInterval": 7000,
+          "speedMin": 40,
+          "speedMax": 50
+        },
+        {
+          "type": "speed",
+          "count": 5,
+          "spawnInterval": 3000,
+          "speedMin": 85,
+          "speedMax": 120
+        }
+      ]
+    },
+    {
+      "wave": 10,
+      "enemies": [
+        {
+          "type": "nail",
+          "count": 12,
+          "spawnInterval": 1200,
+          "speedMin": 55,
+          "speedMax": 75
+        },
+        {
+          "type": "zigzag",
+          "count": 8,
+          "spawnInterval": 2000,
+          "speedMin": 40,
+          "speedMax": 60
+        },
+        {
+          "type": "tank",
+          "count": 4,
+          "spawnInterval": 4000,
+          "speedMin": 20,
+          "speedMax": 30
+        },
+        {
+          "type": "spawner",
+          "count": 2,
+          "spawnInterval": 6000,
+          "speedMin": 45,
+          "speedMax": 55
+        },
+        {
+          "type": "speed",
+          "count": 6,
+          "spawnInterval": 2500,
+          "speedMin": 90,
+          "speedMax": 130
+        }
+      ]
+    }
+  ]
+}
