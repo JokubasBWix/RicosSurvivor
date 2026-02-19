@@ -2,6 +2,7 @@ import { TreeStump } from '../entities/TreeStump';
 import { EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
+import { SunburstBackground } from './SunburstBackground';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed'];
 
@@ -19,11 +20,11 @@ export class Game {
   private treeStump: TreeStump;
   private enemyManager: EnemyManager;
   private inputManager: InputManager;
+  private sunburst: SunburstBackground;
   private gameState: GameState = GameState.PLAYING;
   private score: number = 0;
   private lastTime: number = 0;
 
-  // Debug mode
   private debugSelectedType: EnemyType = 'nail';
 
   constructor(canvas: HTMLCanvasElement, inputElement: HTMLInputElement, words: string[]) {
@@ -32,6 +33,7 @@ export class Game {
 
     this.treeStump = new TreeStump(canvas);
     this.enemyManager = new EnemyManager(words);
+    this.sunburst = new SunburstBackground();
     this.inputManager = new InputManager(inputElement, () => {
       this.score++;
     });
@@ -92,6 +94,8 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
+    this.sunburst.update(deltaTime, this.enemyManager.currentWave);
+
     if (this.gameState !== GameState.PLAYING) return;
 
     deltaTime = Math.min(deltaTime, 0.1);
@@ -114,8 +118,7 @@ export class Game {
   }
 
   private render(): void {
-    this.ctx.fillStyle = 'black';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.sunburst.render(this.ctx, this.canvas.width, this.canvas.height);
 
     if (this.gameState === GameState.PLAYING) {
       this.treeStump.render(this.ctx);
@@ -124,32 +127,29 @@ export class Game {
         enemy.render(this.ctx);
       }
 
-      // Score
       this.ctx.font = '24px monospace';
-      this.ctx.fillStyle = 'white';
+      this.ctx.fillStyle = '#3a3a3a';
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'top';
       this.ctx.fillText(`Score: ${this.score}`, 20, 40);
       this.ctx.fillText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
 
-      // Wave UI (hidden in debug mode)
       if (!this.enemyManager.debugMode) {
         this.enemyManager.renderWaveUI(this.ctx, this.canvas.width, this.canvas.height);
       }
 
-      // Debug HUD
       if (this.enemyManager.debugMode) {
         this.renderDebugHUD();
       }
     } else if (this.gameState === GameState.GAME_OVER) {
       this.ctx.font = '48px monospace';
-      this.ctx.fillStyle = 'red';
+      this.ctx.fillStyle = '#cc2222';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 2 - 30);
 
       this.ctx.font = '24px monospace';
-      this.ctx.fillStyle = 'white';
+      this.ctx.fillStyle = '#3a3a3a';
       this.ctx.fillText(
         `Final Score: ${this.score}`,
         this.canvas.width / 2,

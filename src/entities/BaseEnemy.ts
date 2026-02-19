@@ -41,7 +41,7 @@ export abstract class BaseEnemy implements Enemy {
     ctx.textBaseline = 'middle';
 
     const untypedPart = this.word.substring(this.typed.length);
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#2a2a2a';
     ctx.fillText(
       untypedPart,
       this.position.x + this.typed.length * 5,
@@ -49,7 +49,7 @@ export abstract class BaseEnemy implements Enemy {
     );
 
     if (this.typed.length > 0) {
-      ctx.fillStyle = 'lime';
+      ctx.fillStyle = '#11882a';
       ctx.fillText(
         this.typed,
         this.position.x - untypedPart.length * 5,
