@@ -11,19 +11,10 @@ canvas {
 
 input {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 20px;
-  padding: 8px 12px;
-  border: 2px solid #ccc;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #333;
-  outline: none;
-}
-
-input:focus {
-  border-color: #999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }

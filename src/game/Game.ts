@@ -1,5 +1,6 @@
 import { TreeStump } from '../entities/TreeStump';
-import { EnemyType, GameState } from '../types';
+import { LeafProjectile } from '../entities/LeafProjectile';
+import { Enemy, EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
 import { SunburstBackground } from './SunburstBackground';
@@ -23,6 +24,8 @@ export class Game {
   private enemyManager: EnemyManager;
   private inputManager: InputManager;
   private sunburst: SunburstBackground;
+  private leafProjectiles: LeafProjectile[] = [];
+  private knockbacks: Map<Enemy, { vx: number; vy: number }> = new Map();
   private gameState: GameState = GameState.PLAYING;
   private score: number = 0;
   private lastTime: number = 0;
@@ -36,9 +39,16 @@ export class Game {
     this.treeStump = new TreeStump(canvas);
     this.enemyManager = new EnemyManager(words);
     this.sunburst = new SunburstBackground();
-    this.inputManager = new InputManager(inputElement, () => {
-      this.score++;
-    });
+    this.inputManager = new InputManager(
+      inputElement,
+      () => {},
+      (enemy) => {
+        this.treeStump.triggerAttack();
+        this.leafProjectiles.push(
+          new LeafProjectile({ ...this.treeStump.position }, enemy)
+        );
+      }
+    );
 
     this.setupCanvas();
     this.setupEventListeners();
@@ -102,7 +112,7 @@ export class Game {
 
     deltaTime = Math.min(deltaTime, 0.1);
 
-    this.treeStump.update();
+    this.treeStump.update(deltaTime);
 
     this.enemyManager.update(
       deltaTime,
@@ -114,9 +124,61 @@ export class Game {
     // Collisions don't kill in debug mode
     if (!this.enemyManager.debugMode && this.enemyManager.checkCollisions(this.treeStump)) {
       this.gameState = GameState.GAME_OVER;
+      this.treeStump.setDead();
+    }
+
+    for (const proj of this.leafProjectiles) {
+      proj.update(deltaTime);
+      if (proj.arrived) {
+        this.applyKnockback(proj.targetEnemy);
+      }
+    }
+    this.leafProjectiles = this.leafProjectiles.filter((p) => !p.arrived);
+
+    this.updateKnockbacks(deltaTime);
+
+    for (const enemy of this.enemyManager.getEnemies()) {
+      if (enemy.wordCompleted && !enemy.isDestroyed) {
+        const hasInflight = this.leafProjectiles.some((p) => p.targetEnemy === enemy);
+        if (!hasInflight) {
+          enemy.isDestroyed = true;
+          this.score++;
+        }
+      }
     }
 
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
+  }
+
+  private applyKnockback(enemy: Enemy): void {
+    const dx = enemy.position.x - this.treeStump.position.x;
+    const dy = enemy.position.y - this.treeStump.position.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const knockbackSpeed = 50;
+    const existing = this.knockbacks.get(enemy);
+    const vx = (dx / dist) * knockbackSpeed;
+    const vy = (dy / dist) * knockbackSpeed;
+    if (existing) {
+      existing.vx += vx;
+      existing.vy += vy;
+    } else {
+      this.knockbacks.set(enemy, { vx, vy });
+    }
+  }
+
+  private updateKnockbacks(deltaTime: number): void {
+    const decay = 0.02;
+    const friction = Math.pow(decay, deltaTime);
+    for (const [enemy, kb] of this.knockbacks) {
+      enemy.position.x += kb.vx * deltaTime;
+      enemy.position.y += kb.vy * deltaTime;
+      kb.vx *= friction;
+      kb.vy *= friction;
+
+      if (Math.abs(kb.vx) < 1 && Math.abs(kb.vy) < 1) {
+        this.knockbacks.delete(enemy);
+      }
+    }
   }
 
   private render(): void {
@@ -144,6 +206,8 @@ export class Game {
         this.renderDebugHUD();
       }
     } else if (this.gameState === GameState.GAME_OVER) {
+      this.treeStump.render(this.ctx);
+
       this.ctx.font = `48px "${FONT_DEFAULT}", monospace`;
       this.ctx.fillStyle = '#cc2222';
       this.ctx.textAlign = 'center';
