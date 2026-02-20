@@ -1,6 +1,8 @@
 import { Enemy, EnemyType, Position, WaveConfig, WaveEnemyConfig } from '../types';
 import { EnemyFactory } from './EnemyFactory';
 import { SpawnerNail } from '../entities/SpawnerNail';
+import { Sniper } from '../entities/Sniper';
+import { SNIPER_WORDS } from '../data/sniperWords';
 import wavesData from '../data/waves.json';
 
 export enum WaveState {
@@ -46,7 +48,8 @@ export class EnemyManager {
 
   spawnAtPosition(type: EnemyType, spawnPos: Position, targetPos: Position): void {
     const word = this.getWordForType(type);
-    const enemy = EnemyFactory.createAtPosition(type, word, spawnPos, targetPos, this.words);
+    const wordsForType = type === 'sniper' ? SNIPER_WORDS : this.words;
+    const enemy = EnemyFactory.createAtPosition(type, word, spawnPos, targetPos, wordsForType);
     this.enemies.push(enemy);
   }
 
@@ -123,6 +126,7 @@ export class EnemyManager {
 
         if (tracker.timer >= tracker.config.spawnInterval) {
           const word = this.getWordForType(tracker.config.type);
+          const wordsForType = tracker.config.type === 'sniper' ? SNIPER_WORDS : this.words;
           const enemy = EnemyFactory.create(
             tracker.config.type,
             word,
@@ -131,7 +135,7 @@ export class EnemyManager {
             targetY,
             tracker.config.speedMin,
             tracker.config.speedMax,
-            this.words
+            wordsForType
           );
           this.enemies.push(enemy);
           tracker.spawned++;
@@ -161,6 +165,11 @@ export class EnemyManager {
         this.enemies.push(...enemy.pendingSpawns);
         enemy.pendingSpawns = [];
       }
+
+      if (enemy instanceof Sniper && enemy.pendingSpawns.length > 0) {
+        this.enemies.push(...enemy.pendingSpawns);
+        enemy.pendingSpawns = [];
+      }
     }
 
     this.enemies = this.enemies.filter(
@@ -186,6 +195,8 @@ export class EnemyManager {
       case 'speed':
         filteredWords = this.words.filter(w => w.length <= 5);
         break;
+      case 'sniper':
+        return SNIPER_WORDS[Math.floor(Math.random() * SNIPER_WORDS.length)];
       default:
         filteredWords = this.words;
         break;

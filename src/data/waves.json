@@ -37,6 +37,13 @@
           "spawnInterval": 2500,
           "speedMin": 90,
           "speedMax": 130
+        },
+        {
+          "type": "sniper",
+          "count": 1,
+          "spawnInterval": 6000,
+          "speedMin": 30,
+          "speedMax": 50
         }
       ]
     },

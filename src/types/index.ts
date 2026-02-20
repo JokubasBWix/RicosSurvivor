@@ -29,7 +29,7 @@ export interface Enemy extends Entity {
   checkCollision(player: { position: Position; radius: number }): boolean;
 }
 
-export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed';
+export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed' | 'sniper';
 
 export interface WaveEnemyConfig {
   type: EnemyType;
