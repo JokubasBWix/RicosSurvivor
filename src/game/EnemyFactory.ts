@@ -8,7 +8,7 @@ import { Sniper } from '../entities/Sniper';
 
 const DEFAULT_SPEEDS: Record<EnemyType, { min: number; max: number }> = {
   nail:    { min: 45, max: 80 },
-  zigzag:  { min: 35, max: 55 },
+  zigzag:  { min: 15, max: 25 },
   spawner: { min: 40, max: 60 },
   tank:    { min: 20, max: 35 },
   speed:   { min: 80, max: 120 },
@@ -22,25 +22,24 @@ export class EnemyFactory {
     canvas: HTMLCanvasElement,
     targetX: number,
     targetY: number,
-    speedMin: number,
-    speedMax: number,
     words: string[] = []
   ): Enemy {
+    const { min, max } = DEFAULT_SPEEDS[type];
     switch (type) {
       case 'nail':
-        return Nail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+        return Nail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'zigzag':
-        return ZigzagNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+        return ZigzagNail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'spawner':
-        return SpawnerNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax, words);
+        return SpawnerNail.spawn360(word, canvas, targetX, targetY, min, max, words);
       case 'tank':
-        return TankNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+        return TankNail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'speed':
-        return SpeedNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+        return SpeedNail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'sniper':
-        return Sniper.spawn360(word, canvas, targetX, targetY, speedMin, speedMax, words);
+        return Sniper.spawn360(word, canvas, targetX, targetY, min, max, words);
       default:
-        return Nail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+        return Nail.spawn360(word, canvas, targetX, targetY, min, max);
     }
   }
 

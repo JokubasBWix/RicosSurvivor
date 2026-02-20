@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { FONT_SNIPER } from '../game/FontLoader';
 import nailGenericImg from '../assets/images/nail-generic.png';
 
 export class SniperNail extends BaseEnemy {
@@ -9,6 +10,8 @@ export class SniperNail extends BaseEnemy {
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 15);
+    this.fontFamily = FONT_SNIPER;
+    this.fontSize = 28;
 
     if (!SniperNail.image) {
       SniperNail.image = new Image();

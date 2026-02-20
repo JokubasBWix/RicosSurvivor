@@ -1,4 +1,5 @@
 import { Enemy, Position, Velocity } from '../types';
+import { FONT_DEFAULT } from '../game/FontLoader';
 
 export abstract class BaseEnemy implements Enemy {
   public position: Position;
@@ -7,6 +8,8 @@ export abstract class BaseEnemy implements Enemy {
   public typed: string = '';
   public radius: number;
   public isDestroyed: boolean = false;
+  protected fontFamily: string = FONT_DEFAULT;
+  protected fontSize: number = 16;
 
   constructor(word: string, position: Position, velocity: Velocity, radius: number = 20) {
     this.word = word;
@@ -36,7 +39,7 @@ export abstract class BaseEnemy implements Enemy {
   }
 
   protected renderWord(ctx: CanvasRenderingContext2D): void {
-    ctx.font = '16px monospace';
+    ctx.font = `${this.fontSize}px "${this.fontFamily}", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 

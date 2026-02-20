@@ -140,7 +140,7 @@ export class SpawnerNail extends BaseEnemy {
 
     // Show spawn counter
     if (this.hasReachedStop) {
-      ctx.font = '10px monospace';
+      ctx.font = `10px "${this.fontFamily}", monospace`;
       ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
       ctx.textAlign = 'center';
       ctx.fillText(
