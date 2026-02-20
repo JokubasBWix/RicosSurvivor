@@ -4,14 +4,15 @@ import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
 import { SunburstBackground } from './SunburstBackground';
 
-const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed'];
+const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
 const ENEMY_TYPE_COLORS: Record<EnemyType, string> = {
   nail:    '#ff9966',
   zigzag:  '#6688ff',
   spawner: '#ff66ff',
   tank:    '#ff6666',
-  speed:   '#66ff66'
+  speed:   '#66ff66',
+  sniper:  '#ff4444'
 };
 
 export class Game {
@@ -173,7 +174,7 @@ export class Game {
     const panelX = this.canvas.width - 260;
     const panelY = 20;
     const panelW = 240;
-    const panelH = 210;
+    const panelH = 234;
 
     // Panel background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';

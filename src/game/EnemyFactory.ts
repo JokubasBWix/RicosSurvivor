@@ -4,13 +4,15 @@ import { ZigzagNail } from '../entities/ZigzagNail';
 import { SpawnerNail } from '../entities/SpawnerNail';
 import { TankNail } from '../entities/TankNail';
 import { SpeedNail } from '../entities/SpeedNail';
+import { Sniper } from '../entities/Sniper';
 
 const DEFAULT_SPEEDS: Record<EnemyType, { min: number; max: number }> = {
   nail:    { min: 45, max: 80 },
   zigzag:  { min: 35, max: 55 },
   spawner: { min: 40, max: 60 },
   tank:    { min: 20, max: 35 },
-  speed:   { min: 80, max: 120 }
+  speed:   { min: 80, max: 120 },
+  sniper:  { min: 30, max: 50 }
 };
 
 export class EnemyFactory {
@@ -35,6 +37,8 @@ export class EnemyFactory {
         return TankNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
       case 'speed':
         return SpeedNail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
+      case 'sniper':
+        return Sniper.spawn360(word, canvas, targetX, targetY, speedMin, speedMax, words);
       default:
         return Nail.spawn360(word, canvas, targetX, targetY, speedMin, speedMax);
     }
@@ -67,6 +71,8 @@ export class EnemyFactory {
         return new TankNail(word, spawnPos, velocity);
       case 'speed':
         return new SpeedNail(word, spawnPos, velocity);
+      case 'sniper':
+        return new Sniper(word, spawnPos, velocity, targetPos, words);
       default:
         return new Nail(word, spawnPos, velocity);
     }
