@@ -3,6 +3,7 @@ import { EnemyFactory } from './EnemyFactory';
 import { SpawnerNail } from '../entities/SpawnerNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
+import { FONT_DEFAULT } from './FontLoader';
 import wavesData from '../data/waves.json';
 
 export enum WaveState {
@@ -133,8 +134,6 @@ export class EnemyManager {
             canvas,
             targetX,
             targetY,
-            tracker.config.speedMin,
-            tracker.config.speedMax,
             wordsForType
           );
           this.enemies.push(enemy);
@@ -216,7 +215,7 @@ export class EnemyManager {
 
   renderWaveUI(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
     // Always show current wave indicator (top-right)
-    ctx.font = '20px monospace';
+    ctx.font = `20px "${FONT_DEFAULT}", monospace`;
     ctx.fillStyle = 'rgba(58, 58, 58, 0.8)';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
@@ -229,25 +228,25 @@ export class EnemyManager {
     if (this.waveState === WaveState.TRANSITIONING) {
       const alpha = 1 - this.waveAnnouncementProgress * 0.7;
 
-      ctx.font = '48px monospace';
+      ctx.font = `48px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = `rgba(180, 120, 0, ${alpha})`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`Wave ${this.currentWave}`, canvasWidth / 2, canvasHeight / 2 - 80);
 
-      ctx.font = '20px monospace';
+      ctx.font = `20px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = `rgba(80, 80, 80, ${alpha})`;
       ctx.fillText('Get ready!', canvasWidth / 2, canvasHeight / 2 - 40);
     }
 
     if (this.waveState === WaveState.ALL_COMPLETE) {
-      ctx.font = '48px monospace';
+      ctx.font = `48px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = 'rgba(20, 160, 20, 0.9)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('YOU WIN!', canvasWidth / 2, canvasHeight / 2 - 80);
 
-      ctx.font = '24px monospace';
+      ctx.font = `24px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = 'rgba(80, 80, 80, 0.9)';
       ctx.fillText('All waves cleared!', canvasWidth / 2, canvasHeight / 2 - 40);
     }

@@ -1,6 +1,8 @@
 import { Enemy, Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { FONT_SNIPER } from '../game/FontLoader';
 import { SniperNail } from './SniperNail';
+
 export class Sniper extends BaseEnemy {
   private stopPosition: Position;
   private hasReachedStop: boolean = false;
@@ -21,6 +23,8 @@ export class Sniper extends BaseEnemy {
     words: string[]
   ) {
     super(word, position, velocity, 22);
+    this.fontFamily = FONT_SNIPER;
+    this.fontSize = 30;
     this.playerPosition = { ...playerPosition };
     this.words = words;
 
@@ -101,7 +105,7 @@ export class Sniper extends BaseEnemy {
     this.renderWord(ctx);
 
     if (this.hasReachedStop) {
-      ctx.font = '10px monospace';
+      ctx.font = `10px "${FONT_SNIPER}", monospace`;
       ctx.fillStyle = 'rgba(255, 80, 80, 0.8)';
       ctx.textAlign = 'center';
       ctx.fillText(

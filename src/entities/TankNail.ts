@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { FONT_TANK } from '../game/FontLoader';
 import axeImg from '../assets/images/axe-generic.png';
 
 export class TankNail extends BaseEnemy {
@@ -9,6 +10,8 @@ export class TankNail extends BaseEnemy {
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 35);
+    this.fontFamily = FONT_TANK;
+    this.fontSize = 25;
 
     if (!TankNail.image) {
       TankNail.image = new Image();

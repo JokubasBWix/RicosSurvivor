@@ -3,6 +3,7 @@ import { EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
 import { SunburstBackground } from './SunburstBackground';
+import { FONT_DEFAULT } from './FontLoader';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
@@ -128,7 +129,7 @@ export class Game {
         enemy.render(this.ctx);
       }
 
-      this.ctx.font = '24px monospace';
+      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
       this.ctx.fillStyle = '#3a3a3a';
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'top';
@@ -143,13 +144,13 @@ export class Game {
         this.renderDebugHUD();
       }
     } else if (this.gameState === GameState.GAME_OVER) {
-      this.ctx.font = '48px monospace';
+      this.ctx.font = `48px "${FONT_DEFAULT}", monospace`;
       this.ctx.fillStyle = '#cc2222';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 2 - 30);
 
-      this.ctx.font = '24px monospace';
+      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
       this.ctx.fillStyle = '#3a3a3a';
       this.ctx.fillText(
         `Final Score: ${this.score}`,
@@ -185,8 +186,7 @@ export class Game {
     ctx.fill();
     ctx.stroke();
 
-    // Title
-    ctx.font = '16px monospace';
+    ctx.font = `16px "${FONT_DEFAULT}", monospace`;
     ctx.fillStyle = 'rgba(255, 200, 50, 1)';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -203,7 +203,7 @@ export class Game {
         ctx.fillRect(panelX + 6, y - 2, panelW - 12, 22);
       }
 
-      ctx.font = '14px monospace';
+      ctx.font = `14px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = isSelected ? ENEMY_TYPE_COLORS[type] : 'rgba(180, 180, 180, 0.6)';
       ctx.fillText(
         `${isSelected ? '>' : ' '} [${i + 1}] ${type}`,
@@ -215,7 +215,7 @@ export class Game {
 
     // Instructions
     y += 8;
-    ctx.font = '11px monospace';
+    ctx.font = `11px "${FONT_DEFAULT}", monospace`;
     ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
     ctx.fillText('Click to spawn  |  C = clear', panelX + 12, y);
     y += 16;

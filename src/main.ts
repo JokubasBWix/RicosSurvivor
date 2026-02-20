@@ -1,6 +1,6 @@
 import { Game } from './game/Game';
+import { loadFonts } from './game/FontLoader';
 
-// Word list
 const WORDS = [
   'asteroid',
   'orbit',
@@ -19,8 +19,9 @@ const WORDS = [
   'supernova'
 ];
 
-// Initialize game when DOM is ready
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadFonts();
+
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const input = document.getElementById('input') as HTMLInputElement;
 

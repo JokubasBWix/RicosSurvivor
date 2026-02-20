@@ -35,8 +35,6 @@ export interface WaveEnemyConfig {
   type: EnemyType;
   count: number;
   spawnInterval: number;
-  speedMin: number;
-  speedMax: number;
 }
 
 export interface WaveConfig {
