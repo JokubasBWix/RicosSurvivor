@@ -3,6 +3,7 @@ import { LeafProjectile } from '../entities/LeafProjectile';
 import { Enemy, EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
+import { Leaderboard } from './Leaderboard';
 import { SunburstBackground } from './SunburstBackground';
 import { FONT_DEFAULT } from './FontLoader';
 
@@ -30,7 +31,25 @@ export class Game {
   private score: number = 0;
   private lastTime: number = 0;
 
+  // Leaderboard
+  private leaderboard: Leaderboard;
+
+  // Overlay DOM refs
+  private overlay: HTMLDivElement;
+  private overlayScore: HTMLElement;
+  private overlayWave: HTMLElement;
+  private playerNameInput: HTMLInputElement;
+  private saveBtn: HTMLButtonElement;
+  private restartBtn: HTMLButtonElement;
+  private nameInputSection: HTMLElement;
+  private leaderboardList: HTMLOListElement;
+  private leaderboardEmpty: HTMLElement;
+  private scoreSaved: boolean = false;
+
+  // Debug mode
   private debugSelectedType: EnemyType = 'nail';
+  private debugMessage: string = '';
+  private debugMessageTimer: number = 0;
 
   constructor(canvas: HTMLCanvasElement, inputElement: HTMLInputElement, words: string[]) {
     this.canvas = canvas;
@@ -50,14 +69,55 @@ export class Game {
       }
     );
 
+    this.leaderboard = new Leaderboard();
+
+    // Grab overlay DOM elements
+    this.overlay = document.getElementById('game-over-overlay') as HTMLDivElement;
+    this.overlayScore = document.getElementById('overlay-score')!;
+    this.overlayWave = document.getElementById('overlay-wave')!;
+    this.playerNameInput = document.getElementById('player-name') as HTMLInputElement;
+    this.saveBtn = document.getElementById('save-score-btn') as HTMLButtonElement;
+    this.restartBtn = document.getElementById('restart-btn') as HTMLButtonElement;
+    this.nameInputSection = document.getElementById('name-input-section')!;
+    this.leaderboardList = document.getElementById('leaderboard-list') as HTMLOListElement;
+    this.leaderboardEmpty = document.getElementById('leaderboard-empty')!;
+
     this.setupCanvas();
     this.setupEventListeners();
+    this.setupOverlayListeners();
     this.inputManager.focus();
   }
 
   private setupCanvas(): void {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+  }
+
+  private setupOverlayListeners(): void {
+    this.saveBtn.addEventListener('click', () => {
+      const name = this.playerNameInput.value.trim();
+      if (!name) return;
+      this.leaderboard.addEntry(name, this.score, this.enemyManager.currentWave);
+      this.scoreSaved = true;
+      this.nameInputSection.classList.add('hidden');
+      this.renderLeaderboardList();
+    });
+
+    this.restartBtn.addEventListener('click', () => {
+      this.restart();
+    });
+
+    // Allow Enter key in name input to save
+    this.playerNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.saveBtn.click();
+      }
+      // Prevent Tab from propagating when overlay is open
+      if (e.key === 'Tab') {
+        e.stopPropagation();
+      }
+    });
   }
 
   private setupEventListeners(): void {
@@ -67,6 +127,13 @@ export class Game {
     });
 
     window.addEventListener('keydown', (e) => {
+      // Tab to restart when game over
+      if (e.key === 'Tab' && this.gameState === GameState.GAME_OVER) {
+        e.preventDefault();
+        this.restart();
+        return;
+      }
+
       // Toggle debug mode with backtick
       if (e.key === '`') {
         this.enemyManager.debugMode = !this.enemyManager.debugMode;
@@ -88,9 +155,22 @@ export class Game {
       if (e.key === 'c' || e.key === 'C') {
         this.enemyManager.clearEnemies();
       }
+
+      // L clears entire leaderboard
+      if (e.key === 'l' || e.key === 'L') {
+        this.leaderboard.clear();
+        this.showDebugMessage('Leaderboard cleared');
+      }
+
+      // R prompts to remove a leaderboard entry
+      if (e.key === 'r' || e.key === 'R') {
+        this.promptRemoveLeaderboardEntry();
+      }
     });
 
     this.canvas.addEventListener('click', (e) => {
+      if (this.gameState === GameState.GAME_OVER) return;
+
       if (!this.enemyManager.debugMode) return;
 
       const rect = this.canvas.getBoundingClientRect();
@@ -105,12 +185,100 @@ export class Game {
     });
   }
 
+  private showDebugMessage(msg: string): void {
+    this.debugMessage = msg;
+    this.debugMessageTimer = 2;
+  }
+
+  private promptRemoveLeaderboardEntry(): void {
+    const entries = this.leaderboard.getEntries();
+    if (entries.length === 0) {
+      this.showDebugMessage('Leaderboard is empty');
+      return;
+    }
+
+    const list = entries.map((e, i) => `${i + 1}. ${e.name} - ${e.score}`).join('\n');
+    const input = prompt(`Remove which entry? (1-${entries.length})\n\n${list}`);
+    if (input === null) return;
+
+    const idx = parseInt(input) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= entries.length) {
+      this.showDebugMessage('Invalid index');
+      return;
+    }
+
+    const removed = entries[idx];
+    this.leaderboard.removeEntry(idx);
+    this.showDebugMessage(`Removed: ${removed.name}`);
+  }
+
+  private showGameOverOverlay(): void {
+    this.overlayScore.textContent = `Final Score: ${this.score}`;
+    this.overlayWave.textContent = `Reached Wave ${this.enemyManager.currentWave}`;
+    this.playerNameInput.value = '';
+    this.scoreSaved = false;
+    this.nameInputSection.classList.remove('hidden');
+    this.renderLeaderboardList();
+    this.overlay.classList.remove('hidden');
+
+    // Focus the name input after a short delay so it's visible
+    setTimeout(() => this.playerNameInput.focus(), 50);
+  }
+
+  private hideGameOverOverlay(): void {
+    this.overlay.classList.add('hidden');
+  }
+
+  private renderLeaderboardList(): void {
+    const entries = this.leaderboard.getEntries();
+    this.leaderboardList.innerHTML = '';
+
+    if (entries.length === 0) {
+      this.leaderboardEmpty.classList.remove('hidden');
+      return;
+    }
+
+    this.leaderboardEmpty.classList.add('hidden');
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const li = document.createElement('li');
+
+      // Highlight the just-saved entry
+      if (
+        this.scoreSaved &&
+        entry.name === this.playerNameInput.value.trim() &&
+        entry.score === this.score
+      ) {
+        li.classList.add('highlight');
+      }
+
+      li.innerHTML = `
+        <span class="rank">${i + 1}.</span>
+        <span class="entry-name">${this.escapeHtml(entry.name)}</span>
+        <span class="entry-score">${entry.score}</span>
+      `;
+      this.leaderboardList.appendChild(li);
+    }
+  }
+
+  private escapeHtml(str: string): string {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   private update(deltaTime: number): void {
     this.sunburst.update(deltaTime, this.enemyManager.currentWave);
 
     if (this.gameState !== GameState.PLAYING) return;
 
     deltaTime = Math.min(deltaTime, 0.1);
+
+    // Tick debug message timer
+    if (this.debugMessageTimer > 0) {
+      this.debugMessageTimer -= deltaTime;
+    }
 
     this.treeStump.update(deltaTime);
 
@@ -124,6 +292,7 @@ export class Game {
     // Collisions don't kill in debug mode
     if (!this.enemyManager.debugMode && this.enemyManager.checkCollisions(this.treeStump)) {
       this.gameState = GameState.GAME_OVER;
+      this.showGameOverOverlay();
       this.treeStump.setDead();
     }
 
@@ -205,33 +374,8 @@ export class Game {
       if (this.enemyManager.debugMode) {
         this.renderDebugHUD();
       }
-    } else if (this.gameState === GameState.GAME_OVER) {
-      this.treeStump.render(this.ctx);
-
-      this.ctx.font = `48px "${FONT_DEFAULT}", monospace`;
-      this.ctx.fillStyle = '#cc2222';
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 2 - 30);
-
-      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
-      this.ctx.fillStyle = '#3a3a3a';
-      this.ctx.fillText(
-        `Final Score: ${this.score}`,
-        this.canvas.width / 2,
-        this.canvas.height / 2 + 20
-      );
-      this.ctx.fillText(
-        `Reached Wave ${this.enemyManager.currentWave}`,
-        this.canvas.width / 2,
-        this.canvas.height / 2 + 60
-      );
-      this.ctx.fillText(
-        'Refresh to restart',
-        this.canvas.width / 2,
-        this.canvas.height / 2 + 100
-      );
     }
+    // Game over rendering is handled by the HTML overlay
   }
 
   private renderDebugHUD(): void {
@@ -239,7 +383,7 @@ export class Game {
     const panelX = this.canvas.width - 260;
     const panelY = 20;
     const panelW = 240;
-    const panelH = 234;
+    const panelH = 250;
 
     // Panel background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
@@ -283,7 +427,30 @@ export class Game {
     ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
     ctx.fillText('Click to spawn  |  C = clear', panelX + 12, y);
     y += 16;
+    ctx.fillText('L = clear leaderboard', panelX + 12, y);
+    y += 16;
+    ctx.fillText('R = remove leaderboard entry', panelX + 12, y);
+    y += 16;
     ctx.fillText('` to exit debug mode', panelX + 12, y);
+
+    // Debug message toast
+    if (this.debugMessageTimer > 0 && this.debugMessage) {
+      const msgY = this.canvas.height - 60;
+      ctx.font = '16px monospace';
+      const alpha = Math.min(1, this.debugMessageTimer);
+      ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(this.debugMessage, this.canvas.width / 2, msgY);
+    }
+  }
+
+  private restart(): void {
+    this.hideGameOverOverlay();
+    this.gameState = GameState.PLAYING;
+    this.score = 0;
+    this.enemyManager.reset();
+    this.inputManager.clear();
+    this.inputManager.focus();
   }
 
   public start(): void {

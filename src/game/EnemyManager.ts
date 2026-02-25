@@ -58,6 +58,11 @@ export class EnemyManager {
     this.enemies = [];
   }
 
+  reset(): void {
+    this.enemies = [];
+    this.startWave(0);
+  }
+
   private startWave(index: number): void {
     this.currentWaveIndex = index;
     this.waveState = WaveState.TRANSITIONING;
