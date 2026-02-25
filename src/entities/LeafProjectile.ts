@@ -1,7 +1,7 @@
 import { Position, Enemy } from '../types';
 import leafGif from '../assets/projectiles/leaf.gif';
 
-const SPEED = 400;
+const SPEED = 800;
 const ARRIVE_THRESHOLD = 15;
 
 export class LeafProjectile {

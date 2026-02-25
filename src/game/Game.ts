@@ -1,11 +1,21 @@
 import { TreeStump } from '../entities/TreeStump';
 import { LeafProjectile } from '../entities/LeafProjectile';
+import { Nail } from '../entities/Nail';
+import { ZigzagNail } from '../entities/ZigzagNail';
+import { SpawnerNail } from '../entities/SpawnerNail';
+import { TankNail } from '../entities/TankNail';
+import { SpeedNail } from '../entities/SpeedNail';
+import { Sniper } from '../entities/Sniper';
 import { Enemy, EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
 import { Leaderboard } from './Leaderboard';
 import { SunburstBackground } from './SunburstBackground';
+import { TargetLockRenderer } from './TargetLockRenderer';
 import { FONT_DEFAULT } from './FontLoader';
+import { ScreenShake } from './ScreenShake';
+import { ShatterEffect } from './ShatterEffect';
+import { ImpactEffect } from './ImpactEffect';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
@@ -25,8 +35,11 @@ export class Game {
   private enemyManager: EnemyManager;
   private inputManager: InputManager;
   private sunburst: SunburstBackground;
+  private targetLock: TargetLockRenderer;
   private leafProjectiles: LeafProjectile[] = [];
   private knockbacks: Map<Enemy, { vx: number; vy: number }> = new Map();
+  private shatterEffects: ShatterEffect[] = [];
+  private impactEffects: ImpactEffect[] = [];
   private gameState: GameState = GameState.PLAYING;
   private score: number = 0;
   private lastTime: number = 0;
@@ -46,6 +59,9 @@ export class Game {
   private leaderboardEmpty: HTMLElement;
   private scoreSaved: boolean = false;
 
+  // Screen shake
+  private screenShake: ScreenShake = new ScreenShake();
+
   // Debug mode
   private debugSelectedType: EnemyType = 'nail';
   private debugMessage: string = '';
@@ -58,6 +74,7 @@ export class Game {
     this.treeStump = new TreeStump(canvas);
     this.enemyManager = new EnemyManager(words);
     this.sunburst = new SunburstBackground();
+    this.targetLock = new TargetLockRenderer();
     this.inputManager = new InputManager(
       inputElement,
       () => {},
@@ -66,6 +83,9 @@ export class Game {
         this.leafProjectiles.push(
           new LeafProjectile({ ...this.treeStump.position }, enemy)
         );
+        // Juicy typing feedback: scale pop + micro screen shake
+        enemy.typedScale = 1.35;
+        this.screenShake.trigger(1.5);
       }
     );
 
@@ -127,12 +147,21 @@ export class Game {
     });
 
     window.addEventListener('keydown', (e) => {
-      // Tab to restart when game over
-      if (e.key === 'Tab' && this.gameState === GameState.GAME_OVER) {
+      // Don't intercept when a visible input/textarea is focused (e.g. name input on game over)
+      const active = document.activeElement;
+      const isTypingInInput =
+        active instanceof HTMLElement &&
+        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') &&
+        active.id !== 'input'; // the hidden game input
+
+      // Tab to restart when game over (but not if typing in the name field)
+      if (e.key === 'Tab' && this.gameState === GameState.GAME_OVER && !isTypingInInput) {
         e.preventDefault();
         this.restart();
         return;
       }
+
+      if (isTypingInInput) return;
 
       // Toggle debug mode with backtick
       if (e.key === '`') {
@@ -300,6 +329,12 @@ export class Game {
       proj.update(deltaTime);
       if (proj.arrived) {
         this.applyKnockback(proj.targetEnemy);
+
+        // Spawn small impact explosion at the enemy's position
+        const color = ENEMY_TYPE_COLORS[this.getEnemyType(proj.targetEnemy)];
+        this.impactEffects.push(
+          new ImpactEffect({ ...proj.targetEnemy.position }, proj.targetEnemy.radius, color)
+        );
       }
     }
     this.leafProjectiles = this.leafProjectiles.filter((p) => !p.arrived);
@@ -312,18 +347,42 @@ export class Game {
         if (!hasInflight) {
           enemy.isDestroyed = true;
           this.score++;
+          this.screenShake.trigger(5);
+
+          // Spawn shatter effect at the enemy's death position
+          const color = ENEMY_TYPE_COLORS[this.getEnemyType(enemy)];
+          this.shatterEffects.push(
+            new ShatterEffect({ ...enemy.position }, enemy.radius, color)
+          );
         }
       }
     }
 
+    // Update shatter effects
+    for (const effect of this.shatterEffects) {
+      effect.update(deltaTime);
+    }
+    this.shatterEffects = this.shatterEffects.filter((e) => !e.isFinished);
+
+    // Update impact effects
+    for (const effect of this.impactEffects) {
+      effect.update(deltaTime);
+    }
+    this.impactEffects = this.impactEffects.filter((e) => !e.isFinished);
+
+    this.screenShake.update(deltaTime);
+
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
+
+    this.targetLock.setTarget(this.inputManager.getLockedEnemy());
+    this.targetLock.update(deltaTime);
   }
 
   private applyKnockback(enemy: Enemy): void {
     const dx = enemy.position.x - this.treeStump.position.x;
     const dy = enemy.position.y - this.treeStump.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const knockbackSpeed = 50;
+    const knockbackSpeed = 150;
     const existing = this.knockbacks.get(enemy);
     const vx = (dx / dist) * knockbackSpeed;
     const vy = (dy / dist) * knockbackSpeed;
@@ -354,12 +413,28 @@ export class Game {
     this.sunburst.render(this.ctx, this.canvas.width, this.canvas.height);
 
     if (this.gameState === GameState.PLAYING) {
+      // Apply screen shake offset to all game-world rendering
+      this.screenShake.apply(this.ctx);
+
       this.treeStump.render(this.ctx);
 
       for (const enemy of this.enemyManager.getEnemies()) {
         enemy.render(this.ctx);
       }
 
+      for (const effect of this.shatterEffects) {
+        effect.render(this.ctx);
+      }
+
+      for (const effect of this.impactEffects) {
+        effect.render(this.ctx);
+      }
+
+      this.targetLock.render(this.ctx);
+
+      this.screenShake.restore(this.ctx);
+
+      // HUD is drawn without shake so text stays crisp
       this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
       this.ctx.fillStyle = '#3a3a3a';
       this.ctx.textAlign = 'left';
@@ -444,12 +519,23 @@ export class Game {
     }
   }
 
+  private getEnemyType(enemy: Enemy): EnemyType {
+    if (enemy instanceof ZigzagNail) return 'zigzag';
+    if (enemy instanceof SpawnerNail) return 'spawner';
+    if (enemy instanceof TankNail) return 'tank';
+    if (enemy instanceof SpeedNail) return 'speed';
+    if (enemy instanceof Sniper) return 'sniper';
+    return 'nail';
+  }
+
   private restart(): void {
     this.hideGameOverOverlay();
     this.gameState = GameState.PLAYING;
     this.score = 0;
+    this.shatterEffects = [];
+    this.treeStump.reset();
     this.enemyManager.reset();
-    this.inputManager.clear();
+    // this.inputManager.clear();
     this.inputManager.focus();
   }
 

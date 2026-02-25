@@ -5,14 +5,16 @@ import hackSawImg from '../assets/images/hack-saw-generic.png';
 export class ZigzagNail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
-  private imageHeight: number = 45;
+  private imageHeight: number = 85;
   private oscillationTimer: number = 0;
   private oscillationFrequency: number;
   private oscillationAmplitude: number;
+  private baseSpeed: number;
 
   constructor(word: string, position: Position, velocity: Velocity) {
-    super(word, position, velocity, 18);
+    super(word, position, velocity, 32);
 
+    this.baseSpeed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
     this.oscillationFrequency = 2 + Math.random() * 2;
     this.oscillationAmplitude = 60 + Math.random() * 40;
 
@@ -26,6 +28,7 @@ export class ZigzagNail extends BaseEnemy {
   }
 
   update(deltaTime: number, targetPosition?: Position): void {
+    this.updateScale(deltaTime);
     this.oscillationTimer += deltaTime;
 
     if (targetPosition) {
@@ -34,7 +37,7 @@ export class ZigzagNail extends BaseEnemy {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance > 0) {
-        const speed = this.getSpeed();
+        const speed = this.baseSpeed;
         const dirX = dx / distance;
         const dirY = dy / distance;
 

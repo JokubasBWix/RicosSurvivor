@@ -237,11 +237,11 @@ export class EnemyManager {
       ctx.fillStyle = `rgba(180, 120, 0, ${alpha})`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`Wave ${this.currentWave}`, canvasWidth / 2, canvasHeight / 2 - 80);
+      ctx.fillText(`Wave ${this.currentWave}`, canvasWidth / 2, canvasHeight / 2 - 180);
 
       ctx.font = `20px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = `rgba(80, 80, 80, ${alpha})`;
-      ctx.fillText('Get ready!', canvasWidth / 2, canvasHeight / 2 - 40);
+      ctx.fillText('Get ready!', canvasWidth / 2, canvasHeight / 2 - 140);
     }
 
     if (this.waveState === WaveState.ALL_COMPLETE) {
@@ -249,11 +249,11 @@ export class EnemyManager {
       ctx.fillStyle = 'rgba(20, 160, 20, 0.9)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('YOU WIN!', canvasWidth / 2, canvasHeight / 2 - 80);
+      ctx.fillText('YOU WIN!', canvasWidth / 2, canvasHeight / 2 - 180);
 
       ctx.font = `24px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = 'rgba(80, 80, 80, 0.9)';
-      ctx.fillText('All waves cleared!', canvasWidth / 2, canvasHeight / 2 - 40);
+      ctx.fillText('All waves cleared!', canvasWidth / 2, canvasHeight / 2 - 140);
     }
   }
 }

@@ -20,6 +20,7 @@ export class SpeedNail extends BaseEnemy {
   }
 
   update(deltaTime: number, targetPosition?: Position): void {
+    this.updateScale(deltaTime);
     if (targetPosition) {
       this.homeToward(targetPosition, deltaTime);
     } else {

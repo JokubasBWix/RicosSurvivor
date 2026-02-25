@@ -21,6 +21,16 @@ export class InputManager {
 
   private setupListeners(): void {
     window.addEventListener('keydown', (e) => {
+      // Don't intercept when a visible input/textarea is focused (e.g. name input on game over)
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement &&
+        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') &&
+        active !== this.inputElement
+      ) {
+        return;
+      }
+
       if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
 
       const key = e.key.toLowerCase();
@@ -78,6 +88,10 @@ export class InputManager {
     if (this.lockedEnemy && (this.lockedEnemy.isDestroyed || this.lockedEnemy.wordCompleted || !enemies.includes(this.lockedEnemy))) {
       this.unlock();
     }
+  }
+
+  getLockedEnemy(): Enemy | null {
+    return this.lockedEnemy;
   }
 
   focus(): void {
