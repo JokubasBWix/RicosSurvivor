@@ -6,7 +6,7 @@ import powerToolImg from '../assets/images/power-tool-generic.png';
 export class SpawnerNail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
-  private imageHeight: number = 55;
+  private imageHeight: number = 90;
 
   private stopPosition: Position;
   private hasReachedStop: boolean = false;
@@ -26,7 +26,7 @@ export class SpawnerNail extends BaseEnemy {
     playerPosition: Position,
     words: string[]
   ) {
-    super(word, position, velocity, 25);
+    super(word, position, velocity, 40);
     this.playerPosition = { ...playerPosition };
     this.words = words;
 
@@ -48,6 +48,7 @@ export class SpawnerNail extends BaseEnemy {
   }
 
   update(deltaTime: number, targetPosition?: Position): void {
+    this.updateScale(deltaTime);
     if (targetPosition) {
       this.playerPosition = { ...targetPosition };
     }

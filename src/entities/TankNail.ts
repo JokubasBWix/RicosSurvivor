@@ -6,12 +6,12 @@ import axeImg from '../assets/images/axe-generic.png';
 export class TankNail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
-  private imageHeight: number = 70;
+  private imageHeight: number = 110;
 
   constructor(word: string, position: Position, velocity: Velocity) {
-    super(word, position, velocity, 35);
+    super(word, position, velocity, 55);
     this.fontFamily = FONT_TANK;
-    this.fontSize = 25;
+    this.fontSize = 32;
 
     if (!TankNail.image) {
       TankNail.image = new Image();
@@ -23,6 +23,7 @@ export class TankNail extends BaseEnemy {
   }
 
   update(deltaTime: number, targetPosition?: Position): void {
+    this.updateScale(deltaTime);
     if (targetPosition) {
       this.homeToward(targetPosition, deltaTime);
     } else {

@@ -23,6 +23,7 @@ export class SniperNail extends BaseEnemy {
   }
 
   update(deltaTime: number): void {
+    this.updateScale(deltaTime);
     this.position.x += this.velocity.x * deltaTime;
     this.position.y += this.velocity.y * deltaTime;
   }

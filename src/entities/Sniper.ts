@@ -38,6 +38,7 @@ export class Sniper extends BaseEnemy {
   }
 
   update(deltaTime: number, targetPosition?: Position): void {
+    this.updateScale(deltaTime);
     if (targetPosition) {
       this.playerPosition = { ...targetPosition };
     }

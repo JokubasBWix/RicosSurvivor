@@ -48,6 +48,11 @@ export class TreeStump {
     this.state = 'dead';
   }
 
+  reset(): void {
+    this.state = 'neutral';
+    this.attackTimer = 0;
+  }
+
   update(deltaTime?: number): void {
     this.position.x = this.canvas.width / 2;
     this.position.y = this.canvas.height / 2;
