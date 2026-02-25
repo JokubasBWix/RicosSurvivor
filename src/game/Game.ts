@@ -1,17 +1,21 @@
 import { TreeStump } from '../entities/TreeStump';
-import { EnemyType, GameState } from '../types';
+import { LeafProjectile } from '../entities/LeafProjectile';
+import { Enemy, EnemyType, GameState } from '../types';
 import { InputManager } from './InputManager';
 import { EnemyManager } from './EnemyManager';
 import { Leaderboard } from './Leaderboard';
+import { SunburstBackground } from './SunburstBackground';
+import { FONT_DEFAULT } from './FontLoader';
 
-const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed'];
+const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
 const ENEMY_TYPE_COLORS: Record<EnemyType, string> = {
   nail:    '#ff9966',
   zigzag:  '#6688ff',
   spawner: '#ff66ff',
   tank:    '#ff6666',
-  speed:   '#66ff66'
+  speed:   '#66ff66',
+  sniper:  '#ff4444'
 };
 
 export class Game {
@@ -20,6 +24,9 @@ export class Game {
   private treeStump: TreeStump;
   private enemyManager: EnemyManager;
   private inputManager: InputManager;
+  private sunburst: SunburstBackground;
+  private leafProjectiles: LeafProjectile[] = [];
+  private knockbacks: Map<Enemy, { vx: number; vy: number }> = new Map();
   private gameState: GameState = GameState.PLAYING;
   private score: number = 0;
   private lastTime: number = 0;
@@ -50,9 +57,17 @@ export class Game {
 
     this.treeStump = new TreeStump(canvas);
     this.enemyManager = new EnemyManager(words);
-    this.inputManager = new InputManager(inputElement, () => {
-      this.score++;
-    });
+    this.sunburst = new SunburstBackground();
+    this.inputManager = new InputManager(
+      inputElement,
+      () => {},
+      (enemy) => {
+        this.treeStump.triggerAttack();
+        this.leafProjectiles.push(
+          new LeafProjectile({ ...this.treeStump.position }, enemy)
+        );
+      }
+    );
 
     this.leaderboard = new Leaderboard();
 
@@ -254,6 +269,8 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
+    this.sunburst.update(deltaTime, this.enemyManager.currentWave);
+
     if (this.gameState !== GameState.PLAYING) return;
 
     deltaTime = Math.min(deltaTime, 0.1);
@@ -263,7 +280,7 @@ export class Game {
       this.debugMessageTimer -= deltaTime;
     }
 
-    this.treeStump.update();
+    this.treeStump.update(deltaTime);
 
     this.enemyManager.update(
       deltaTime,
@@ -276,14 +293,65 @@ export class Game {
     if (!this.enemyManager.debugMode && this.enemyManager.checkCollisions(this.treeStump)) {
       this.gameState = GameState.GAME_OVER;
       this.showGameOverOverlay();
+      this.treeStump.setDead();
+    }
+
+    for (const proj of this.leafProjectiles) {
+      proj.update(deltaTime);
+      if (proj.arrived) {
+        this.applyKnockback(proj.targetEnemy);
+      }
+    }
+    this.leafProjectiles = this.leafProjectiles.filter((p) => !p.arrived);
+
+    this.updateKnockbacks(deltaTime);
+
+    for (const enemy of this.enemyManager.getEnemies()) {
+      if (enemy.wordCompleted && !enemy.isDestroyed) {
+        const hasInflight = this.leafProjectiles.some((p) => p.targetEnemy === enemy);
+        if (!hasInflight) {
+          enemy.isDestroyed = true;
+          this.score++;
+        }
+      }
     }
 
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
   }
 
+  private applyKnockback(enemy: Enemy): void {
+    const dx = enemy.position.x - this.treeStump.position.x;
+    const dy = enemy.position.y - this.treeStump.position.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const knockbackSpeed = 50;
+    const existing = this.knockbacks.get(enemy);
+    const vx = (dx / dist) * knockbackSpeed;
+    const vy = (dy / dist) * knockbackSpeed;
+    if (existing) {
+      existing.vx += vx;
+      existing.vy += vy;
+    } else {
+      this.knockbacks.set(enemy, { vx, vy });
+    }
+  }
+
+  private updateKnockbacks(deltaTime: number): void {
+    const decay = 0.02;
+    const friction = Math.pow(decay, deltaTime);
+    for (const [enemy, kb] of this.knockbacks) {
+      enemy.position.x += kb.vx * deltaTime;
+      enemy.position.y += kb.vy * deltaTime;
+      kb.vx *= friction;
+      kb.vy *= friction;
+
+      if (Math.abs(kb.vx) < 1 && Math.abs(kb.vy) < 1) {
+        this.knockbacks.delete(enemy);
+      }
+    }
+  }
+
   private render(): void {
-    this.ctx.fillStyle = 'black';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.sunburst.render(this.ctx, this.canvas.width, this.canvas.height);
 
     if (this.gameState === GameState.PLAYING) {
       this.treeStump.render(this.ctx);
@@ -292,20 +360,17 @@ export class Game {
         enemy.render(this.ctx);
       }
 
-      // Score
-      this.ctx.font = '24px monospace';
-      this.ctx.fillStyle = 'white';
+      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
+      this.ctx.fillStyle = '#3a3a3a';
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'top';
       this.ctx.fillText(`Score: ${this.score}`, 20, 40);
       this.ctx.fillText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
 
-      // Wave UI (hidden in debug mode)
       if (!this.enemyManager.debugMode) {
         this.enemyManager.renderWaveUI(this.ctx, this.canvas.width, this.canvas.height);
       }
 
-      // Debug HUD
       if (this.enemyManager.debugMode) {
         this.renderDebugHUD();
       }
@@ -329,8 +394,7 @@ export class Game {
     ctx.fill();
     ctx.stroke();
 
-    // Title
-    ctx.font = '16px monospace';
+    ctx.font = `16px "${FONT_DEFAULT}", monospace`;
     ctx.fillStyle = 'rgba(255, 200, 50, 1)';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -347,7 +411,7 @@ export class Game {
         ctx.fillRect(panelX + 6, y - 2, panelW - 12, 22);
       }
 
-      ctx.font = '14px monospace';
+      ctx.font = `14px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = isSelected ? ENEMY_TYPE_COLORS[type] : 'rgba(180, 180, 180, 0.6)';
       ctx.fillText(
         `${isSelected ? '>' : ' '} [${i + 1}] ${type}`,
@@ -359,7 +423,7 @@ export class Game {
 
     // Instructions
     y += 8;
-    ctx.font = '11px monospace';
+    ctx.font = `11px "${FONT_DEFAULT}", monospace`;
     ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
     ctx.fillText('Click to spawn  |  C = clear', panelX + 12, y);
     y += 16;

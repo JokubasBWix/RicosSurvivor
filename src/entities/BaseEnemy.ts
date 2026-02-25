@@ -1,4 +1,5 @@
 import { Enemy, Position, Velocity } from '../types';
+import { FONT_DEFAULT } from '../game/FontLoader';
 
 export abstract class BaseEnemy implements Enemy {
   public position: Position;
@@ -7,6 +8,9 @@ export abstract class BaseEnemy implements Enemy {
   public typed: string = '';
   public radius: number;
   public isDestroyed: boolean = false;
+  public wordCompleted: boolean = false;
+  protected fontFamily: string = FONT_DEFAULT;
+  protected fontSize: number = 16;
 
   constructor(word: string, position: Position, velocity: Velocity, radius: number = 20) {
     this.word = word;
@@ -36,26 +40,18 @@ export abstract class BaseEnemy implements Enemy {
   }
 
   protected renderWord(ctx: CanvasRenderingContext2D): void {
-    ctx.font = '16px monospace';
+    if (this.wordCompleted) return;
+
+    ctx.font = `${this.fontSize}px "${this.fontFamily}", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const untypedPart = this.word.substring(this.typed.length);
-    ctx.fillStyle = 'white';
-    ctx.fillText(
-      untypedPart,
-      this.position.x + this.typed.length * 5,
-      this.position.y - this.radius - 20
-    );
+    const isLocked = this.typed.length > 0;
+    const remaining = this.word.substring(this.typed.length);
+    const wordY = this.position.y - this.radius - 20;
 
-    if (this.typed.length > 0) {
-      ctx.fillStyle = 'lime';
-      ctx.fillText(
-        this.typed,
-        this.position.x - untypedPart.length * 5,
-        this.position.y - this.radius - 20
-      );
-    }
+    ctx.fillStyle = isLocked ? '#22cc44' : '#2a2a2a';
+    ctx.fillText(remaining, this.position.x, wordY);
   }
 
   protected homeToward(targetPosition: Position, deltaTime: number): void {

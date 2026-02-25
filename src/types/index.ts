@@ -26,17 +26,16 @@ export interface Enemy extends Entity {
   velocity: Velocity;
   radius: number;
   isDestroyed: boolean;
+  wordCompleted: boolean;
   checkCollision(player: { position: Position; radius: number }): boolean;
 }
 
-export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed';
+export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed' | 'sniper';
 
 export interface WaveEnemyConfig {
   type: EnemyType;
   count: number;
   spawnInterval: number;
-  speedMin: number;
-  speedMax: number;
 }
 
 export interface WaveConfig {
