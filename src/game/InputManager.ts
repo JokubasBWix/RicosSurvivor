@@ -1,4 +1,4 @@
-import { Enemy } from '../types';
+import { Enemy, Position } from '../types';
 
 export class InputManager {
   private inputElement: HTMLInputElement;
@@ -7,6 +7,7 @@ export class InputManager {
   private enemies: Enemy[] = [];
   private lockedEnemy: Enemy | null = null;
   private typedIndex: number = 0;
+  private playerPosition: Position = { x: 0, y: 0 };
 
   constructor(
     inputElement: HTMLInputElement,
@@ -55,8 +56,14 @@ export class InputManager {
         this.unlock();
       }
     } else {
-      const target = this.enemies.find((e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key);
-      if (!target) return;
+      const candidates = this.enemies.filter(
+        (e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key
+      );
+      if (candidates.length === 0) return;
+
+      const target = candidates.reduce((closest, e) => {
+        return this.distanceToPlayer(e) < this.distanceToPlayer(closest) ? e : closest;
+      });
 
       this.lockedEnemy = target;
       this.typedIndex = 1;
@@ -80,6 +87,16 @@ export class InputManager {
     }
     this.lockedEnemy = null;
     this.typedIndex = 0;
+  }
+
+  setPlayerPosition(pos: Position): void {
+    this.playerPosition = pos;
+  }
+
+  private distanceToPlayer(enemy: Enemy): number {
+    const dx = enemy.position.x - this.playerPosition.x;
+    const dy = enemy.position.y - this.playerPosition.y;
+    return dx * dx + dy * dy;
   }
 
   setEnemies(enemies: Enemy[]): void {

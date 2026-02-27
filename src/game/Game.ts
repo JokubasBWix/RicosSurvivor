@@ -372,6 +372,7 @@ export class Game {
 
     this.screenShake.update(deltaTime);
 
+    this.inputManager.setPlayerPosition(this.treeStump.position);
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
 
     this.targetLock.setTarget(this.inputManager.getLockedEnemy());
