@@ -1,21 +1,25 @@
-import { Enemy } from '../types';
+import { Enemy, Position } from '../types';
 
 export class InputManager {
   private inputElement: HTMLInputElement;
   private onEnemyDestroyed: (enemy: Enemy) => void;
   private onCorrectLetter: ((enemy: Enemy) => void) | null;
+  private onWrongLetter: (() => void) | null;
   private enemies: Enemy[] = [];
   private lockedEnemy: Enemy | null = null;
   private typedIndex: number = 0;
+  private playerPosition: Position = { x: 0, y: 0 };
 
   constructor(
     inputElement: HTMLInputElement,
     onEnemyDestroyed: (enemy: Enemy) => void,
-    onCorrectLetter?: (enemy: Enemy) => void
+    onCorrectLetter?: (enemy: Enemy) => void,
+    onWrongLetter?: () => void
   ) {
     this.inputElement = inputElement;
     this.onEnemyDestroyed = onEnemyDestroyed;
     this.onCorrectLetter = onCorrectLetter ?? null;
+    this.onWrongLetter = onWrongLetter ?? null;
     this.setupListeners();
   }
 
@@ -44,7 +48,10 @@ export class InputManager {
   private handleKey(key: string): void {
     if (this.lockedEnemy) {
       const expected = this.lockedEnemy.word[this.typedIndex];
-      if (key !== expected) return;
+      if (key !== expected) {
+        this.onWrongLetter?.();
+        return;
+      }
 
       this.typedIndex++;
       this.lockedEnemy.typed = this.lockedEnemy.word.substring(0, this.typedIndex);
@@ -55,8 +62,17 @@ export class InputManager {
         this.unlock();
       }
     } else {
-      const target = this.enemies.find((e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key);
-      if (!target) return;
+      const candidates = this.enemies.filter(
+        (e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key
+      );
+      if (candidates.length === 0) {
+        this.onWrongLetter?.();
+        return;
+      }
+
+      const target = candidates.reduce((closest, e) => {
+        return this.distanceToPlayer(e) < this.distanceToPlayer(closest) ? e : closest;
+      });
 
       this.lockedEnemy = target;
       this.typedIndex = 1;
@@ -80,6 +96,16 @@ export class InputManager {
     }
     this.lockedEnemy = null;
     this.typedIndex = 0;
+  }
+
+  setPlayerPosition(pos: Position): void {
+    this.playerPosition = pos;
+  }
+
+  private distanceToPlayer(enemy: Enemy): number {
+    const dx = enemy.position.x - this.playerPosition.x;
+    const dy = enemy.position.y - this.playerPosition.y;
+    return dx * dx + dy * dy;
   }
 
   setEnemies(enemies: Enemy[]): void {
