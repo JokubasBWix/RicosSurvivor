@@ -16,6 +16,7 @@ import { FONT_DEFAULT } from './FontLoader';
 import { ScreenShake } from './ScreenShake';
 import { ShatterEffect } from './ShatterEffect';
 import { ImpactEffect } from './ImpactEffect';
+import { BigExplosionEffect } from './BigExplosionEffect';
 import { StreakManager } from './StreakManager';
 import { StreakBar } from './StreakBar';
 
@@ -41,6 +42,7 @@ export class Game {
   private leafProjectiles: LeafProjectile[] = [];
   private knockbacks: Map<Enemy, { vx: number; vy: number }> = new Map();
   private shatterEffects: ShatterEffect[] = [];
+  private bigExplosionEffects: BigExplosionEffect[] = [];
   private impactEffects: ImpactEffect[] = [];
   private gameState: GameState = GameState.PLAYING;
   private score: number = 0;
@@ -365,13 +367,19 @@ export class Game {
           if (!enemy.isMinion) {
             this.score += this.streakManager.multiplier;
           }
-          this.screenShake.trigger(5);
-
-          // Spawn shatter effect at the enemy's death position
-          const color = ENEMY_TYPE_COLORS[this.getEnemyType(enemy)];
-          this.shatterEffects.push(
-            new ShatterEffect({ ...enemy.position }, enemy.radius, color)
-          );
+          const enemyType = this.getEnemyType(enemy);
+          if (enemyType === 'sniper') {
+            this.screenShake.trigger(15);
+            this.bigExplosionEffects.push(
+              new BigExplosionEffect({ ...enemy.position }, enemy.radius)
+            );
+          } else {
+            this.screenShake.trigger(5);
+            const color = ENEMY_TYPE_COLORS[enemyType];
+            this.shatterEffects.push(
+              new ShatterEffect({ ...enemy.position }, enemy.radius, color)
+            );
+          }
         }
       }
     }
@@ -381,6 +389,12 @@ export class Game {
       effect.update(deltaTime);
     }
     this.shatterEffects = this.shatterEffects.filter((e) => !e.isFinished);
+
+    // Update big explosion effects
+    for (const effect of this.bigExplosionEffects) {
+      effect.update(deltaTime);
+    }
+    this.bigExplosionEffects = this.bigExplosionEffects.filter((e) => !e.isFinished);
 
     // Update impact effects
     for (const effect of this.impactEffects) {
@@ -474,6 +488,10 @@ export class Game {
       }
 
       for (const effect of this.shatterEffects) {
+        effect.render(this.ctx);
+      }
+
+      for (const effect of this.bigExplosionEffects) {
         effect.render(this.ctx);
       }
 
@@ -640,6 +658,7 @@ export class Game {
     this.gameState = GameState.PLAYING;
     this.score = 0;
     this.shatterEffects = [];
+    this.bigExplosionEffects = [];
     this.treeStump.reset();
     this.enemyManager.reset();
     this.streakManager.reset();

@@ -19,8 +19,8 @@ export class TargetLockRenderer {
 
   setTarget(enemy: Enemy | null): void {
     if (enemy === null) {
+      if (this.animating) return;
       this.target = null;
-      this.animating = false;
       this.lockTimer = 0;
       return;
     }
