@@ -10,6 +10,7 @@ export class SniperNail extends BaseEnemy {
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 15);
+    this.isMinion = true;
     this.fontFamily = FONT_SNIPER;
     this.fontSize = 28;
 

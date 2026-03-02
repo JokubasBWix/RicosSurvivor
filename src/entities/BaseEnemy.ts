@@ -21,6 +21,7 @@ export abstract class BaseEnemy implements Enemy {
   public isDestroyed: boolean = false;
   public wordCompleted: boolean = false;
   public typedScale: number = 1;
+  public isMinion: boolean = false;
   protected fontFamily: string = FONT_DEFAULT;
   protected fontSize: number = 16;
 

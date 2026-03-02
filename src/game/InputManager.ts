@@ -4,6 +4,7 @@ export class InputManager {
   private inputElement: HTMLInputElement;
   private onEnemyDestroyed: (enemy: Enemy) => void;
   private onCorrectLetter: ((enemy: Enemy) => void) | null;
+  private onWrongLetter: (() => void) | null;
   private enemies: Enemy[] = [];
   private lockedEnemy: Enemy | null = null;
   private typedIndex: number = 0;
@@ -12,11 +13,13 @@ export class InputManager {
   constructor(
     inputElement: HTMLInputElement,
     onEnemyDestroyed: (enemy: Enemy) => void,
-    onCorrectLetter?: (enemy: Enemy) => void
+    onCorrectLetter?: (enemy: Enemy) => void,
+    onWrongLetter?: () => void
   ) {
     this.inputElement = inputElement;
     this.onEnemyDestroyed = onEnemyDestroyed;
     this.onCorrectLetter = onCorrectLetter ?? null;
+    this.onWrongLetter = onWrongLetter ?? null;
     this.setupListeners();
   }
 
@@ -45,7 +48,10 @@ export class InputManager {
   private handleKey(key: string): void {
     if (this.lockedEnemy) {
       const expected = this.lockedEnemy.word[this.typedIndex];
-      if (key !== expected) return;
+      if (key !== expected) {
+        this.onWrongLetter?.();
+        return;
+      }
 
       this.typedIndex++;
       this.lockedEnemy.typed = this.lockedEnemy.word.substring(0, this.typedIndex);
@@ -59,7 +65,10 @@ export class InputManager {
       const candidates = this.enemies.filter(
         (e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key
       );
-      if (candidates.length === 0) return;
+      if (candidates.length === 0) {
+        this.onWrongLetter?.();
+        return;
+      }
 
       const target = candidates.reduce((closest, e) => {
         return this.distanceToPlayer(e) < this.distanceToPlayer(closest) ? e : closest;

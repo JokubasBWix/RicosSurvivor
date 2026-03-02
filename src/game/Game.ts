@@ -16,6 +16,8 @@ import { FONT_DEFAULT } from './FontLoader';
 import { ScreenShake } from './ScreenShake';
 import { ShatterEffect } from './ShatterEffect';
 import { ImpactEffect } from './ImpactEffect';
+import { StreakManager } from './StreakManager';
+import { StreakBar } from './StreakBar';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
@@ -62,6 +64,11 @@ export class Game {
   // Screen shake
   private screenShake: ScreenShake = new ScreenShake();
 
+  // Streak system
+  private streakManager: StreakManager = new StreakManager();
+  private streakBar: StreakBar = new StreakBar();
+  private scoreFlameParticles: { x: number; y: number; vx: number; vy: number; alpha: number; size: number; color: string; life: number; maxLife: number }[] = [];
+
   // Debug mode
   private debugSelectedType: EnemyType = 'nail';
   private debugMessage: string = '';
@@ -83,9 +90,18 @@ export class Game {
         this.leafProjectiles.push(
           new LeafProjectile({ ...this.treeStump.position }, enemy)
         );
-        // Juicy typing feedback: scale pop + micro screen shake
         enemy.typedScale = 1.35;
         this.screenShake.trigger(1.5);
+
+        if (!enemy.isMinion) {
+          const tierReached = this.streakManager.onCorrect();
+          if (tierReached) {
+            this.screenShake.trigger(8);
+          }
+        }
+      },
+      () => {
+        this.streakManager.onWrong();
       }
     );
 
@@ -346,7 +362,9 @@ export class Game {
         const hasInflight = this.leafProjectiles.some((p) => p.targetEnemy === enemy);
         if (!hasInflight) {
           enemy.isDestroyed = true;
-          this.score++;
+          if (!enemy.isMinion) {
+            this.score += this.streakManager.multiplier;
+          }
           this.screenShake.trigger(5);
 
           // Spawn shatter effect at the enemy's death position
@@ -371,6 +389,38 @@ export class Game {
     this.impactEffects = this.impactEffects.filter((e) => !e.isFinished);
 
     this.screenShake.update(deltaTime);
+    this.streakBar.update(deltaTime);
+
+    // Update score flame particles
+    for (const p of this.scoreFlameParticles) {
+      p.x += p.vx * deltaTime;
+      p.y += p.vy * deltaTime;
+      p.life -= deltaTime;
+      p.alpha = Math.max(0, p.life / p.maxLife);
+      p.size *= 1 - deltaTime * 2.5;
+      if (p.size < 0.3) p.size = 0.3;
+    }
+    this.scoreFlameParticles = this.scoreFlameParticles.filter((p) => p.life > 0);
+
+    // Spawn score flame particles at 3x multiplier
+    if (this.streakManager.multiplier === 3) {
+      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
+      const scoreTextWidth = this.ctx.measureText(`Score: ${this.score}`).width;
+      for (let i = 0; i < 2; i++) {
+        const life = 0.3 + Math.random() * 0.3;
+        this.scoreFlameParticles.push({
+          x: 20 + Math.random() * scoreTextWidth,
+          y: 40,
+          vx: (Math.random() - 0.5) * 40,
+          vy: -(20 + Math.random() * 40),
+          alpha: 1,
+          size: 2 + Math.random() * 3,
+          color: ['#FFD700', '#FFA500', '#FF6600', '#FF4500'][Math.floor(Math.random() * 4)],
+          life,
+          maxLife: life,
+        });
+      }
+    }
 
     this.inputManager.setPlayerPosition(this.treeStump.position);
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
@@ -383,7 +433,7 @@ export class Game {
     const dx = enemy.position.x - this.treeStump.position.x;
     const dy = enemy.position.y - this.treeStump.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const knockbackSpeed = 150;
+    const knockbackSpeed = 50;
     const existing = this.knockbacks.get(enemy);
     const vx = (dx / dist) * knockbackSpeed;
     const vy = (dy / dist) * knockbackSpeed;
@@ -436,12 +486,68 @@ export class Game {
       this.screenShake.restore(this.ctx);
 
       // HUD is drawn without shake so text stays crisp
+      const mult = this.streakManager.multiplier;
+
       this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
-      this.ctx.fillStyle = '#3a3a3a';
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'top';
+
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      this.ctx.lineWidth = 3;
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeText(`Score: ${this.score}`, 20, 40);
+
+      this.ctx.save();
+      if (mult >= 2) {
+        this.ctx.shadowColor = mult === 3 ? '#FF6600' : '#FFD700';
+        this.ctx.shadowBlur = mult === 3 ? 20 : 12;
+      }
+      this.ctx.fillStyle = mult >= 2 ? '#DAA520' : '#ffffff';
       this.ctx.fillText(`Score: ${this.score}`, 20, 40);
+      this.ctx.restore();
+
+      if (mult > 1) {
+        this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
+        const badgeX = 20 + this.ctx.measureText(`Score: ${this.score}`).width + 12;
+        this.ctx.font = `bold 20px "${FONT_DEFAULT}", monospace`;
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.lineWidth = 3;
+        this.ctx.lineJoin = 'round';
+        this.ctx.strokeText(`x${mult}`, badgeX, 42);
+
+        this.ctx.save();
+        this.ctx.shadowColor = mult === 3 ? '#FF4500' : '#FFD700';
+        this.ctx.shadowBlur = mult === 3 ? 14 : 8;
+        this.ctx.fillStyle = mult === 3 ? '#FF4500' : '#FFD700';
+        this.ctx.fillText(`x${mult}`, badgeX, 42);
+        this.ctx.restore();
+      }
+
+      // Score flame particles (drawn in HUD space, no shake)
+      for (const p of this.scoreFlameParticles) {
+        if (p.alpha <= 0) continue;
+        this.ctx.globalAlpha = p.alpha * 0.8;
+        this.ctx.fillStyle = p.color;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      this.ctx.globalAlpha = 1;
+
+      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'top';
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      this.ctx.lineWidth = 3;
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
+      this.ctx.fillStyle = '#ffffff';
       this.ctx.fillText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
+
+      this.streakBar.render(this.ctx, this.canvas.width, this.canvas.height, this.streakManager);
 
       if (!this.enemyManager.debugMode) {
         this.enemyManager.renderWaveUI(this.ctx, this.canvas.width, this.canvas.height);
@@ -536,6 +642,8 @@ export class Game {
     this.shatterEffects = [];
     this.treeStump.reset();
     this.enemyManager.reset();
+    this.streakManager.reset();
+    this.scoreFlameParticles = [];
     // this.inputManager.clear();
     this.inputManager.focus();
   }
