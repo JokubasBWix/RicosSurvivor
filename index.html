@@ -14,22 +14,28 @@
   <div id="game-over-overlay" class="hidden">
     <div class="overlay-content">
       <h1 class="overlay-title">GAME OVER</h1>
-      <p id="overlay-score" class="overlay-score"></p>
-      <p id="overlay-wave" class="overlay-wave"></p>
 
-      <div id="name-input-section" class="name-input-section">
-        <input id="player-name" type="text" maxlength="20" placeholder="Enter your name..." autocomplete="off" />
-        <button id="save-score-btn" class="overlay-btn save-btn">Save Score</button>
+      <div class="overlay-below-title">
+        <div class="overlay-stats">
+          <p id="overlay-score" class="overlay-score"></p>
+          <p id="overlay-wave" class="overlay-wave"></p>
+        </div>
+
+        <div id="name-input-section" class="name-input-section">
+          <input id="player-name" type="text" maxlength="20" placeholder="Enter your name..." autocomplete="off" />
+          <button id="save-score-btn" class="overlay-btn save-btn">Save Score</button>
+        </div>
+
+        <div class="leaderboard-section">
+          <h2 class="leaderboard-title">Leaderboard</h2>
+          <ol id="leaderboard-list" class="leaderboard-list"></ol>
+          <p id="leaderboard-empty" class="leaderboard-empty hidden">No scores yet</p>
+        </div>
+
+        <img id="dead-stumpy" class="dead-stumpy" alt="Dead Stumpy" />
+
+        <p class="overlay-hint">Press <kbd>Esc</kbd> to restart</p>
       </div>
-
-      <div class="leaderboard-section">
-        <h2 class="leaderboard-title">Leaderboard</h2>
-        <ol id="leaderboard-list" class="leaderboard-list"></ol>
-        <p id="leaderboard-empty" class="leaderboard-empty hidden">No scores yet</p>
-      </div>
-
-      <button id="restart-btn" class="overlay-btn restart-btn">Restart Game</button>
-      <p class="overlay-hint">or press Tab to restart</p>
     </div>
   </div>
 

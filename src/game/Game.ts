@@ -19,6 +19,8 @@ import { ImpactEffect } from './ImpactEffect';
 import { BigExplosionEffect } from './BigExplosionEffect';
 import { StreakManager } from './StreakManager';
 import { StreakBar } from './StreakBar';
+import { ScoreProgressBar } from './ScoreProgressBar';
+import stumpDeadSrc from '../assets/images/stumpy/stump_dead.png';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
 
@@ -57,7 +59,6 @@ export class Game {
   private overlayWave: HTMLElement;
   private playerNameInput: HTMLInputElement;
   private saveBtn: HTMLButtonElement;
-  private restartBtn: HTMLButtonElement;
   private nameInputSection: HTMLElement;
   private leaderboardList: HTMLOListElement;
   private leaderboardEmpty: HTMLElement;
@@ -66,10 +67,15 @@ export class Game {
   // Screen shake
   private screenShake: ScreenShake = new ScreenShake();
 
-  // Streak system
-  private streakManager: StreakManager = new StreakManager();
-  private streakBar: StreakBar = new StreakBar();
-  private scoreFlameParticles: { x: number; y: number; vx: number; vy: number; alpha: number; size: number; color: string; life: number; maxLife: number }[] = [];
+  // Score progress bar
+  private scoreProgressBar: ScoreProgressBar = new ScoreProgressBar();
+
+  // Death animation
+  private deathTimer: number = 0;
+  private deathFreezeTimer: number = 0;
+  private deathFlashAlpha: number = 0;
+  private deathFadeAlpha: number = 0;
+  private deathShatterEffects: ShatterEffect[] = [];
 
   // Debug mode
   private debugSelectedType: EnemyType = 'nail';
@@ -94,17 +100,8 @@ export class Game {
         );
         enemy.typedScale = 1.35;
         this.screenShake.trigger(1.5);
-
-        if (!enemy.isMinion) {
-          const tierReached = this.streakManager.onCorrect();
-          if (tierReached) {
-            this.screenShake.trigger(8);
-          }
-        }
       },
-      () => {
-        this.streakManager.onWrong();
-      }
+      () => {}
     );
 
     this.leaderboard = new Leaderboard();
@@ -115,10 +112,13 @@ export class Game {
     this.overlayWave = document.getElementById('overlay-wave')!;
     this.playerNameInput = document.getElementById('player-name') as HTMLInputElement;
     this.saveBtn = document.getElementById('save-score-btn') as HTMLButtonElement;
-    this.restartBtn = document.getElementById('restart-btn') as HTMLButtonElement;
     this.nameInputSection = document.getElementById('name-input-section')!;
     this.leaderboardList = document.getElementById('leaderboard-list') as HTMLOListElement;
     this.leaderboardEmpty = document.getElementById('leaderboard-empty')!;
+
+    // Set dead stumpy image src (Vite-resolved asset)
+    const deadStumpyImg = document.getElementById('dead-stumpy') as HTMLImageElement | null;
+    if (deadStumpyImg) deadStumpyImg.src = stumpDeadSrc;
 
     this.setupCanvas();
     this.setupEventListeners();
@@ -135,14 +135,10 @@ export class Game {
     this.saveBtn.addEventListener('click', () => {
       const name = this.playerNameInput.value.trim();
       if (!name) return;
-      this.leaderboard.addEntry(name, this.score, this.enemyManager.currentWave);
+      this.leaderboard.addEntry(name, this.score, this.enemyManager.survivalTime);
       this.scoreSaved = true;
       this.nameInputSection.classList.add('hidden');
       this.renderLeaderboardList();
-    });
-
-    this.restartBtn.addEventListener('click', () => {
-      this.restart();
     });
 
     // Allow Enter key in name input to save
@@ -150,10 +146,6 @@ export class Game {
       if (e.key === 'Enter') {
         e.preventDefault();
         this.saveBtn.click();
-      }
-      // Prevent Tab from propagating when overlay is open
-      if (e.key === 'Tab') {
-        e.stopPropagation();
       }
     });
   }
@@ -172,8 +164,8 @@ export class Game {
         (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') &&
         active.id !== 'input'; // the hidden game input
 
-      // Tab to restart when game over (but not if typing in the name field)
-      if (e.key === 'Tab' && this.gameState === GameState.GAME_OVER && !isTypingInInput) {
+      // Escape to restart when game over
+      if (e.key === 'Escape' && this.gameState === GameState.GAME_OVER) {
         e.preventDefault();
         this.restart();
         return;
@@ -261,18 +253,42 @@ export class Game {
 
   private showGameOverOverlay(): void {
     this.overlayScore.textContent = `Final Score: ${this.score}`;
-    this.overlayWave.textContent = `Reached Wave ${this.enemyManager.currentWave}`;
+    this.overlayWave.textContent = `Survived ${EnemyManager.formatTime(this.enemyManager.survivalTime)}`;
     this.playerNameInput.value = '';
     this.scoreSaved = false;
     this.nameInputSection.classList.remove('hidden');
     this.renderLeaderboardList();
+
+    // Reset animation classes before showing
+    const title = this.overlay.querySelector('.overlay-title') as HTMLElement;
+    const belowTitle = this.overlay.querySelector('.overlay-below-title') as HTMLElement;
+    const deadStumpy = this.overlay.querySelector('.dead-stumpy') as HTMLElement;
+    title?.classList.remove('animate-drop');
+    belowTitle?.classList.remove('animate-fade-in');
+    deadStumpy?.classList.remove('animate-fall');
+    this.overlay.classList.remove('visible');
+
+    // Show the overlay (un-hide it)
     this.overlay.classList.remove('hidden');
 
-    // Focus the name input after a short delay so it's visible
-    setTimeout(() => this.playerNameInput.focus(), 50);
+    // Trigger animations on next frame so the browser registers the initial state
+    requestAnimationFrame(() => {
+      this.overlay.classList.add('visible');
+      title?.classList.add('animate-drop');
+      belowTitle?.classList.add('animate-fade-in');
+      deadStumpy?.classList.add('animate-fall');
+    });
+
+    // Focus the name input after animations settle
+    setTimeout(() => this.playerNameInput.focus(), 750);
   }
 
   private hideGameOverOverlay(): void {
+    const title = this.overlay.querySelector('.overlay-title') as HTMLElement;
+    const belowTitle = this.overlay.querySelector('.overlay-below-title') as HTMLElement;
+    title?.classList.remove('animate-drop');
+    belowTitle?.classList.remove('animate-fade-in');
+    this.overlay.classList.remove('visible');
     this.overlay.classList.add('hidden');
   }
 
@@ -300,9 +316,14 @@ export class Game {
         li.classList.add('highlight');
       }
 
+      const timeStr = entry.survivalTime != null
+        ? EnemyManager.formatTime(entry.survivalTime)
+        : '--:--';
+
       li.innerHTML = `
         <span class="rank">${i + 1}.</span>
         <span class="entry-name">${this.escapeHtml(entry.name)}</span>
+        <span class="entry-time">${timeStr}</span>
         <span class="entry-score">${entry.score}</span>
       `;
       this.leaderboardList.appendChild(li);
@@ -316,7 +337,36 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
-    this.sunburst.update(deltaTime, this.enemyManager.currentWave);
+    this.sunburst.update(deltaTime, this.enemyManager.difficultyLevel);
+
+    // Death animation update
+    if (this.gameState === GameState.DYING) {
+      this.screenShake.update(deltaTime);
+
+      // Hit-freeze: skip all updates while freeze timer is active
+      if (this.deathFreezeTimer > 0) {
+        this.deathFreezeTimer -= deltaTime;
+        return;
+      }
+
+      this.deathTimer -= deltaTime;
+
+      // Ramp the dark fade up to match the overlay bg (~0.88)
+      this.deathFadeAlpha = Math.min(0.88, this.deathFadeAlpha + deltaTime * 1.6);
+
+      // Update death shatter effects
+      for (const effect of this.deathShatterEffects) {
+        effect.update(deltaTime);
+      }
+      this.deathShatterEffects = this.deathShatterEffects.filter((e) => !e.isFinished);
+
+      // Transition to GAME_OVER when timer expires
+      if (this.deathTimer <= 0) {
+        this.gameState = GameState.GAME_OVER;
+        this.showGameOverOverlay();
+      }
+      return;
+    }
 
     if (this.gameState !== GameState.PLAYING) return;
 
@@ -338,9 +388,28 @@ export class Game {
 
     // Collisions don't kill in debug mode
     if (!this.enemyManager.debugMode && this.enemyManager.checkCollisions(this.treeStump)) {
-      this.gameState = GameState.GAME_OVER;
-      this.showGameOverOverlay();
+      this.gameState = GameState.DYING;
       this.treeStump.setDead();
+
+      // Death animation parameters
+      this.deathFreezeTimer = 0.08;   // 80ms hit-freeze
+      this.deathTimer = 0.65;         // remaining animation after freeze
+      this.deathFadeAlpha = 0;        // dark fade starts transparent
+
+      // Heavy screen shake on death
+      this.screenShake.trigger(25);
+
+      // Large shatter explosion at the player position
+      this.deathShatterEffects = [];
+      for (let i = 0; i < 3; i++) {
+        this.deathShatterEffects.push(
+          new ShatterEffect(
+            { ...this.treeStump.position },
+            this.treeStump.radius * (1.2 + i * 0.4),
+            '#ff4444'
+          )
+        );
+      }
     }
 
     for (const proj of this.leafProjectiles) {
@@ -365,7 +434,7 @@ export class Game {
         if (!hasInflight) {
           enemy.isDestroyed = true;
           if (!enemy.isMinion) {
-            this.score += this.streakManager.multiplier;
+            this.score += 1;
           }
           const enemyType = this.getEnemyType(enemy);
           if (enemyType === 'sniper') {
@@ -403,38 +472,7 @@ export class Game {
     this.impactEffects = this.impactEffects.filter((e) => !e.isFinished);
 
     this.screenShake.update(deltaTime);
-    this.streakBar.update(deltaTime);
-
-    // Update score flame particles
-    for (const p of this.scoreFlameParticles) {
-      p.x += p.vx * deltaTime;
-      p.y += p.vy * deltaTime;
-      p.life -= deltaTime;
-      p.alpha = Math.max(0, p.life / p.maxLife);
-      p.size *= 1 - deltaTime * 2.5;
-      if (p.size < 0.3) p.size = 0.3;
-    }
-    this.scoreFlameParticles = this.scoreFlameParticles.filter((p) => p.life > 0);
-
-    // Spawn score flame particles at 3x multiplier
-    if (this.streakManager.multiplier === 3) {
-      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
-      const scoreTextWidth = this.ctx.measureText(`Score: ${this.score}`).width;
-      for (let i = 0; i < 2; i++) {
-        const life = 0.3 + Math.random() * 0.3;
-        this.scoreFlameParticles.push({
-          x: 20 + Math.random() * scoreTextWidth,
-          y: 40,
-          vx: (Math.random() - 0.5) * 40,
-          vy: -(20 + Math.random() * 40),
-          alpha: 1,
-          size: 2 + Math.random() * 3,
-          color: ['#FFD700', '#FFA500', '#FF6600', '#FF4500'][Math.floor(Math.random() * 4)],
-          life,
-          maxLife: life,
-        });
-      }
-    }
+    this.scoreProgressBar.update(deltaTime);
 
     this.inputManager.setPlayerPosition(this.treeStump.position);
     this.inputManager.setEnemies(this.enemyManager.getEnemies());
@@ -504,78 +542,62 @@ export class Game {
       this.screenShake.restore(this.ctx);
 
       // HUD is drawn without shake so text stays crisp
-      const mult = this.streakManager.multiplier;
-
-      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
+      this.ctx.font = `bold 42px "${FONT_DEFAULT}", monospace`;
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'top';
 
       this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-      this.ctx.lineWidth = 3;
+      this.ctx.lineWidth = 4;
       this.ctx.lineJoin = 'round';
-      this.ctx.strokeText(`Score: ${this.score}`, 20, 40);
+      this.ctx.strokeText(`Score: ${this.score}`, 20, 20);
 
-      this.ctx.save();
-      if (mult >= 2) {
-        this.ctx.shadowColor = mult === 3 ? '#FF6600' : '#FFD700';
-        this.ctx.shadowBlur = mult === 3 ? 20 : 12;
-      }
-      this.ctx.fillStyle = mult >= 2 ? '#DAA520' : '#ffffff';
-      this.ctx.fillText(`Score: ${this.score}`, 20, 40);
-      this.ctx.restore();
-
-      if (mult > 1) {
-        this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
-        const badgeX = 20 + this.ctx.measureText(`Score: ${this.score}`).width + 12;
-        this.ctx.font = `bold 20px "${FONT_DEFAULT}", monospace`;
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'top';
-
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.lineWidth = 3;
-        this.ctx.lineJoin = 'round';
-        this.ctx.strokeText(`x${mult}`, badgeX, 42);
-
-        this.ctx.save();
-        this.ctx.shadowColor = mult === 3 ? '#FF4500' : '#FFD700';
-        this.ctx.shadowBlur = mult === 3 ? 14 : 8;
-        this.ctx.fillStyle = mult === 3 ? '#FF4500' : '#FFD700';
-        this.ctx.fillText(`x${mult}`, badgeX, 42);
-        this.ctx.restore();
-      }
-
-      // Score flame particles (drawn in HUD space, no shake)
-      for (const p of this.scoreFlameParticles) {
-        if (p.alpha <= 0) continue;
-        this.ctx.globalAlpha = p.alpha * 0.8;
-        this.ctx.fillStyle = p.color;
-        this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-      this.ctx.globalAlpha = 1;
-
-      this.ctx.font = `24px "${FONT_DEFAULT}", monospace`;
-      this.ctx.textAlign = 'left';
-      this.ctx.textBaseline = 'top';
-      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-      this.ctx.lineWidth = 3;
-      this.ctx.lineJoin = 'round';
-      this.ctx.strokeText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.fillText(`Enemies: ${this.enemyManager.getEnemies().length}`, 20, 70);
+      this.ctx.fillText(`Score: ${this.score}`, 20, 20);
 
-      this.streakBar.render(this.ctx, this.canvas.width, this.canvas.height, this.streakManager);
+      this.scoreProgressBar.render(this.ctx, this.canvas.width, this.canvas.height, this.score, this.leaderboard.getEntries());
 
       if (!this.enemyManager.debugMode) {
-        this.enemyManager.renderWaveUI(this.ctx, this.canvas.width, this.canvas.height);
+        this.enemyManager.renderSurvivalUI(this.ctx, this.canvas.width, this.canvas.height);
       }
 
       if (this.enemyManager.debugMode) {
         this.renderDebugHUD();
       }
     }
-    // Game over rendering is handled by the HTML overlay
+
+    // Death animation rendering – frozen game world + flash + fade to black
+    if (this.gameState === GameState.DYING) {
+      this.screenShake.apply(this.ctx);
+
+      // Render the stump (in dead state) and all enemies frozen in place
+      this.treeStump.render(this.ctx);
+
+      for (const enemy of this.enemyManager.getEnemies()) {
+        enemy.render(this.ctx);
+      }
+
+      // Death shatter explosion
+      for (const effect of this.deathShatterEffects) {
+        effect.render(this.ctx);
+      }
+
+      this.screenShake.restore(this.ctx);
+
+      // Dark fade overlay (ramps up to match game-over bg)
+      if (this.deathFadeAlpha > 0) {
+        this.ctx.globalAlpha = this.deathFadeAlpha;
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.globalAlpha = 1;
+      }
+    }
+
+    // Once in GAME_OVER, keep the canvas dark so the sunburst doesn't flash
+    // through before the HTML overlay is fully visible
+    if (this.gameState === GameState.GAME_OVER) {
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
 
   private renderDebugHUD(): void {
@@ -661,8 +683,14 @@ export class Game {
     this.bigExplosionEffects = [];
     this.treeStump.reset();
     this.enemyManager.reset();
-    this.streakManager.reset();
-    this.scoreFlameParticles = [];
+
+    // Reset death animation state
+    this.deathTimer = 0;
+    this.deathFreezeTimer = 0;
+    this.deathFlashAlpha = 0;
+    this.deathFadeAlpha = 0;
+    this.deathShatterEffects = [];
+
     // this.inputManager.clear();
     this.inputManager.focus();
   }

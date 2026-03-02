@@ -34,23 +34,9 @@ export interface Enemy extends Entity {
 
 export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed' | 'sniper';
 
-export interface WaveEnemyConfig {
-  type: EnemyType;
-  count: number;
-  spawnInterval: number;
-}
-
-export interface WaveConfig {
-  wave: number;
-  enemies: WaveEnemyConfig[];
-}
-
-export interface WavesData {
-  waves: WaveConfig[];
-}
-
 export enum GameState {
   PLAYING,
+  DYING,
   GAME_OVER,
   PAUSED
 }
