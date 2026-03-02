@@ -22,9 +22,12 @@ export class EnemyFactory {
     canvas: HTMLCanvasElement,
     targetX: number,
     targetY: number,
-    words: string[] = []
+    words: string[] = [],
+    speedMultiplier: number = 1.0
   ): Enemy {
-    const { min, max } = DEFAULT_SPEEDS[type];
+    const base = DEFAULT_SPEEDS[type];
+    const min = base.min * speedMultiplier;
+    const max = base.max * speedMultiplier;
     switch (type) {
       case 'nail':
         return Nail.spawn360(word, canvas, targetX, targetY, min, max);
@@ -48,13 +51,16 @@ export class EnemyFactory {
     word: string,
     spawnPos: Position,
     targetPos: Position,
-    words: string[] = []
+    words: string[] = [],
+    speedMultiplier: number = 1.0
   ): Enemy {
     const dx = targetPos.x - spawnPos.x;
     const dy = targetPos.y - spawnPos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const speeds = DEFAULT_SPEEDS[type];
-    const speed = speeds.min + Math.random() * (speeds.max - speeds.min);
+    const base = DEFAULT_SPEEDS[type];
+    const min = base.min * speedMultiplier;
+    const max = base.max * speedMultiplier;
+    const speed = min + Math.random() * (max - min);
     const velocity = distance > 0
       ? { x: (dx / distance) * speed, y: (dy / distance) * speed }
       : { x: 0, y: -speed };

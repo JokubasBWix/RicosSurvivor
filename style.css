@@ -24,10 +24,18 @@ input#input {
   position: fixed;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
+  justify-content: flex-start;
+  background: rgba(0, 0, 0, 0);
   z-index: 100;
+  padding: 60px 0 0 0;
+  overflow: hidden;
+  transition: background 0.4s ease-out;
+}
+
+#game-over-overlay.visible {
+  background: rgba(0, 0, 0, 0.88);
 }
 
 #game-over-overlay.hidden {
@@ -38,28 +46,97 @@ input#input {
   text-align: center;
   color: white;
   font-family: monospace;
-  max-width: 420px;
+  max-width: 520px;
   width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .overlay-title {
-  font-size: 48px;
+  font-size: 64px;
   color: #ff4444;
-  margin: 0 0 8px 0;
-  letter-spacing: 4px;
+  margin: 0 0 0 0;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  /* Animation: starts off-screen above */
+  transform: translateY(-120vh);
+  opacity: 0;
+}
+
+.overlay-title.animate-drop {
+  animation: heavyDrop 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Heavy falling animation – drops in, overshoots, bounces back */
+@keyframes heavyDrop {
+  0% {
+    transform: translateY(-120vh) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(12px) scale(1.02, 0.96);
+  }
+  70% {
+    transform: translateY(-6px) scale(0.99, 1.01);
+  }
+  85% {
+    transform: translateY(2px) scale(1.005, 0.998);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Everything below the title – fades/slides up after title lands */
+.overlay-below-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  margin-top: 80px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.overlay-below-title.animate-fade-in {
+  animation: fadeSlideUp 0.5s 0.65s ease-out forwards;
+}
+
+@keyframes fadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stats section */
+.overlay-stats {
+  margin-bottom: 24px;
 }
 
 .overlay-score {
-  font-size: 24px;
+  font-size: 28px;
   margin: 4px 0;
+  color: #ffffff;
 }
 
 .overlay-wave {
-  font-size: 20px;
-  color: #aaa;
-  margin: 4px 0 20px 0;
+  font-size: 22px;
+  color: #aaccff;
+  margin: 4px 0 0 0;
 }
 
 /* Name input */
@@ -120,36 +197,37 @@ input#input {
   cursor: default;
 }
 
-.restart-btn {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
-  margin-top: 16px;
-  font-size: 20px;
-  padding: 12px 32px;
-}
-
-.restart-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: white;
-}
-
+/* Restart hint - pinned to bottom */
 .overlay-hint {
+  font-size: 15px;
+  color: rgba(200, 200, 200, 0.45);
+  margin-top: auto;
+  padding-bottom: 40px;
+}
+
+.overlay-hint kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: monospace;
   font-size: 14px;
-  color: rgba(200, 200, 200, 0.5);
-  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 /* Leaderboard */
 .leaderboard-section {
-  margin: 16px 0;
+  margin: 8px 0;
   text-align: left;
+  width: 100%;
 }
 
 .leaderboard-title {
-  font-size: 20px;
+  font-size: 24px;
   color: #ffcc44;
   text-align: center;
-  margin: 0 0 10px 0;
+  margin: 0 0 14px 0;
   letter-spacing: 2px;
 }
 
@@ -162,8 +240,8 @@ input#input {
 .leaderboard-list li {
   display: flex;
   justify-content: space-between;
-  padding: 6px 12px;
-  font-size: 15px;
+  padding: 10px 14px;
+  font-size: 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -180,9 +258,20 @@ input#input {
   white-space: nowrap;
 }
 
+.leaderboard-list li .entry-time {
+  color: #aaccff;
+  margin-left: 12px;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .leaderboard-list li .entry-score {
   color: #ffcc44;
   margin-left: 12px;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .leaderboard-list li.highlight {
@@ -197,4 +286,34 @@ input#input {
 
 .leaderboard-empty.hidden {
   display: none;
+}
+
+/* Dead Stumpy on game over */
+.dead-stumpy {
+  width: 240px;
+  height: auto;
+  margin: 20px auto 0 auto;
+  display: block;
+  opacity: 0.85;
+  transform: rotate(0deg);
+  transform-origin: bottom center;
+}
+
+.dead-stumpy.animate-fall {
+  animation: stumpyFall 0.6s 1.15s ease-in forwards;
+}
+
+@keyframes stumpyFall {
+  0% {
+    transform: rotate(0deg);
+  }
+  70% {
+    transform: rotate(95deg);
+  }
+  85% {
+    transform: rotate(87deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
 }
