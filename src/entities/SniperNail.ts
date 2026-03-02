@@ -1,12 +1,12 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
 import { FONT_SNIPER } from '../game/FontLoader';
-import nailGenericImg from '../assets/images/nail-generic.png';
+import sniperNailImg from '../assets/images/sniper-nail.png';
 
 export class SniperNail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
-  private imageHeight: number = 35;
+  private imageHeight: number = 55;
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 15);
@@ -19,7 +19,7 @@ export class SniperNail extends BaseEnemy {
       SniperNail.image.onload = () => {
         SniperNail.imageLoaded = true;
       };
-      SniperNail.image.src = nailGenericImg;
+      SniperNail.image.src = sniperNailImg;
     }
   }
 
@@ -38,7 +38,7 @@ export class SniperNail extends BaseEnemy {
 
       ctx.save();
       ctx.translate(this.position.x, this.position.y);
-      ctx.rotate(angle + Math.PI * 1.35);
+      ctx.rotate(angle + Math.PI);
       ctx.drawImage(
         SniperNail.image,
         -imageWidth / 2,
