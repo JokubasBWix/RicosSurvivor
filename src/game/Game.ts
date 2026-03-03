@@ -18,6 +18,7 @@ import { ShatterEffect } from './ShatterEffect';
 import { ImpactEffect } from './ImpactEffect';
 import { BigExplosionEffect } from './BigExplosionEffect';
 import { ScoreProgressBar } from './ScoreProgressBar';
+import { SoundManager } from './SoundManager';
 import stumpDeadSrc from '../assets/images/stumpy/stump_dead.png';
 
 const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
@@ -68,6 +69,9 @@ export class Game {
   // Score progress bar
   private scoreProgressBar: ScoreProgressBar = new ScoreProgressBar();
 
+  // Sound
+  private sound: SoundManager = new SoundManager();
+
   // Death animation
   private deathTimer: number = 0;
   private deathFreezeTimer: number = 0;
@@ -80,18 +84,29 @@ export class Game {
   private debugMessage: string = '';
   private debugMessageTimer: number = 0;
 
+  // Sound test panel
+  private soundPanel: HTMLDivElement;
+
+  // Cleanup
+  private abortController = new AbortController();
+
   constructor(canvas: HTMLCanvasElement, inputElement: HTMLInputElement, words: string[]) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
 
     this.treeStump = new TreeStump(canvas);
     this.enemyManager = new EnemyManager(words);
+    this.enemyManager.onSniperShoot = () => this.sound.playSniperShoot();
+    this.enemyManager.onSpawnerSpawn = () => this.sound.playSpawnerSpawn();
+    this.enemyManager.onTankDash = () => this.sound.playTankDash();
+    this.enemyManager.onTankSpin = () => this.sound.playTankSpin();
     this.sunburst = new SunburstBackground();
     this.targetLock = new TargetLockRenderer();
     this.inputManager = new InputManager(
       inputElement,
       () => {},
       (enemy) => {
+        this.sound.playCorrectLetter();
         this.treeStump.triggerAttack();
         this.leafProjectiles.push(
           new LeafProjectile({ ...this.treeStump.position }, enemy)
@@ -99,7 +114,7 @@ export class Game {
         enemy.typedScale = 1.35;
         this.screenShake.trigger(1.5);
       },
-      () => {}
+      () => { this.sound.playWrongLetter(); }
     );
 
     this.leaderboard = new Leaderboard();
@@ -117,6 +132,14 @@ export class Game {
     // Set dead stumpy image src (Vite-resolved asset)
     const deadStumpyImg = document.getElementById('dead-stumpy') as HTMLImageElement | null;
     if (deadStumpyImg) deadStumpyImg.src = stumpDeadSrc;
+
+    this.soundPanel = this.buildSoundPanel();
+
+    // Sync mute button with persisted state
+    const muteBtn = document.getElementById('mute-btn');
+    if (muteBtn) {
+      muteBtn.textContent = this.sound.muted ? '🔇' : '🔊';
+    }
 
     this.setupCanvas();
     this.setupEventListeners();
@@ -149,10 +172,20 @@ export class Game {
   }
 
   private setupEventListeners(): void {
+    const opts = { signal: this.abortController.signal };
+
     window.addEventListener('resize', () => {
       this.setupCanvas();
       this.treeStump.resize(this.canvas);
-    });
+    }, opts);
+
+    const muteBtn = document.getElementById('mute-btn');
+    if (muteBtn) {
+      muteBtn.addEventListener('click', () => {
+        const muted = this.sound.toggleMute();
+        muteBtn.textContent = muted ? '🔇' : '🔊';
+      }, opts);
+    }
 
     window.addEventListener('keydown', (e) => {
       // Don't intercept when a visible input/textarea is focused (e.g. name input on game over)
@@ -170,6 +203,13 @@ export class Game {
       }
 
       if (isTypingInInput) return;
+
+      // Toggle sound test panel with ~ (Shift+backtick)
+      if (e.key === '~') {
+        const visible = this.soundPanel.style.display !== 'none';
+        this.soundPanel.style.display = visible ? 'none' : 'block';
+        return;
+      }
 
       // Toggle debug mode with backtick
       if (e.key === '`') {
@@ -202,7 +242,7 @@ export class Game {
       if (e.key === 'r' || e.key === 'R') {
         this.promptRemoveLeaderboardEntry();
       }
-    });
+    }, opts);
 
     this.canvas.addEventListener('click', (e) => {
       if (this.gameState === GameState.GAME_OVER) return;
@@ -218,7 +258,7 @@ export class Game {
         { x: clickX, y: clickY },
         this.treeStump.position
       );
-    });
+    }, opts);
   }
 
   private showDebugMessage(msg: string): void {
@@ -246,6 +286,66 @@ export class Game {
     const removed = entries[idx];
     await this.leaderboard.removeEntry(idx);
     this.showDebugMessage(`Removed: ${removed.name}`);
+  }
+
+  private buildSoundPanel(): HTMLDivElement {
+    const panel = document.createElement('div');
+    panel.style.cssText = [
+      'position:fixed', 'top:60px', 'left:12px',
+      'background:rgba(0,0,0,0.88)', 'color:#ddd',
+      'border-radius:8px', 'padding:12px 14px',
+      'max-height:80vh', 'overflow-y:auto',
+      'z-index:9999', 'font:13px/1.6 monospace',
+      'display:none', 'min-width:300px',
+      'border:1px solid rgba(255,200,50,0.4)',
+    ].join(';');
+
+    const title = document.createElement('div');
+    title.textContent = 'Sound Test  (~)';
+    title.style.cssText = 'font-weight:bold;font-size:15px;color:rgba(255,200,50,1);margin-bottom:8px';
+    panel.appendChild(title);
+
+    for (const entry of this.sound.getSoundCatalogue()) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0';
+
+      const btn = document.createElement('button');
+      btn.textContent = '\u25B6';
+      btn.style.cssText = [
+        'cursor:pointer', 'background:none', 'border:1px solid #666',
+        'color:#fff', 'border-radius:4px', 'width:28px', 'height:24px',
+        'font-size:12px', 'flex-shrink:0',
+      ].join(';');
+      btn.addEventListener('click', () => entry.play());
+
+      if (entry.stop) {
+        const stopBtn = document.createElement('button');
+        stopBtn.textContent = '\u25A0';
+        stopBtn.style.cssText = [
+          'cursor:pointer', 'background:none', 'border:1px solid #666',
+          'color:#fff', 'border-radius:4px', 'width:28px', 'height:24px',
+          'font-size:12px', 'flex-shrink:0',
+        ].join(';');
+        stopBtn.addEventListener('click', () => entry.stop!());
+        row.appendChild(stopBtn);
+      }
+
+      const name = document.createElement('span');
+      name.textContent = entry.name;
+      name.style.cssText = 'font-weight:bold;color:#fff;flex-shrink:0';
+
+      const desc = document.createElement('span');
+      desc.textContent = entry.description;
+      desc.style.cssText = 'color:rgba(180,180,180,0.7)';
+
+      row.appendChild(btn);
+      row.appendChild(name);
+      row.appendChild(desc);
+      panel.appendChild(row);
+    }
+
+    document.body.appendChild(panel);
+    return panel;
   }
 
   private showGameOverOverlay(): void {
@@ -372,6 +472,8 @@ export class Game {
       // Transition to GAME_OVER when timer expires
       if (this.deathTimer <= 0) {
         this.gameState = GameState.GAME_OVER;
+        this.sound.playGameOver();
+        this.sound.playGameOverMusic();
         this.showGameOverOverlay();
       }
       return;
@@ -405,6 +507,10 @@ export class Game {
       this.deathTimer = 0.65;         // remaining animation after freeze
       this.deathFadeAlpha = 0;        // dark fade starts transparent
 
+      // Stop music and play death sound
+      this.sound.stopMusic();
+      this.sound.playPlayerDeath();
+
       // Heavy screen shake on death
       this.screenShake.trigger(25);
 
@@ -424,6 +530,7 @@ export class Game {
     for (const proj of this.leafProjectiles) {
       proj.update(deltaTime);
       if (proj.arrived) {
+        this.sound.playImpact();
         this.applyKnockback(proj.targetEnemy);
 
         // Spawn small impact explosion at the enemy's position
@@ -447,11 +554,13 @@ export class Game {
           }
           const enemyType = this.getEnemyType(enemy);
           if (enemyType === 'sniper') {
+            this.sound.playBigExplosion();
             this.screenShake.trigger(15);
             this.bigExplosionEffects.push(
               new BigExplosionEffect({ ...enemy.position }, enemy.radius)
             );
           } else {
+            this.sound.playEnemyDestroyed();
             this.screenShake.trigger(5);
             const color = ENEMY_TYPE_COLORS[enemyType];
             this.shatterEffects.push(
@@ -690,6 +799,7 @@ export class Game {
 
   private restart(): void {
     this.hideGameOverOverlay();
+    this.sound.playGameplayMusic();
     this.gameState = GameState.PLAYING;
     this.score = 0;
     this.shatterEffects = [];
@@ -710,8 +820,14 @@ export class Game {
 
   public async start(): Promise<void> {
     await this.leaderboard.init();
+    this.sound.playGameplayMusic();
     this.lastTime = performance.now();
     this.gameLoop(this.lastTime);
+  }
+
+  public destroy(): void {
+    this.abortController.abort();
+    this.soundPanel.remove();
   }
 
   private gameLoop = (currentTime: number): void => {

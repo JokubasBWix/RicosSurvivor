@@ -1,6 +1,7 @@
 import { Enemy, EnemyType, Position } from '../types';
 import { EnemyFactory } from './EnemyFactory';
 import { SpawnerNail } from '../entities/SpawnerNail';
+import { TankNail } from '../entities/TankNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
 import { FONT_DEFAULT } from './FontLoader';
@@ -40,6 +41,12 @@ export class EnemyManager {
   private enemies: Enemy[] = [];
   private words: string[];
   private _debugMode: boolean = false;
+
+  // Sound callbacks (wired by Game.ts)
+  public onSniperShoot?: () => void;
+  public onSpawnerSpawn?: () => void;
+  public onTankDash?: () => void;
+  public onTankSpin?: () => void;
 
   // Survival state
   private elapsedTime: number = 0;          // seconds since game start
@@ -195,6 +202,7 @@ export class EnemyManager {
       enemy.update(deltaTime, { x: targetX, y: targetY });
 
       if (enemy instanceof SpawnerNail && enemy.pendingSpawns.length > 0) {
+        this.onSpawnerSpawn?.();
         for (const child of enemy.pendingSpawns) {
           this.addChildWithUniqueLetter(child, this.words, usedLetters);
         }
@@ -202,10 +210,19 @@ export class EnemyManager {
       }
 
       if (enemy instanceof Sniper && enemy.pendingSpawns.length > 0) {
+        this.onSniperShoot?.();
         for (const child of enemy.pendingSpawns) {
           this.addChildWithUniqueLetter(child, SNIPER_WORDS, usedLetters);
         }
         enemy.pendingSpawns = [];
+      }
+
+      if (enemy instanceof TankNail && enemy.pendingEvents.length > 0) {
+        for (const ev of enemy.pendingEvents) {
+          if (ev === 'spin') this.onTankSpin?.();
+          else if (ev === 'dash') this.onTankDash?.();
+        }
+        enemy.pendingEvents = [];
       }
     }
 
