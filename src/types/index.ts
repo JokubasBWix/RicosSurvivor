@@ -35,6 +35,7 @@ export interface Enemy extends Entity {
 export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed' | 'sniper';
 
 export enum GameState {
+  START_SCREEN,
   PLAYING,
   DYING,
   GAME_OVER,
