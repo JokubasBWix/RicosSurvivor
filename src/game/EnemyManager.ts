@@ -328,19 +328,36 @@ export class EnemyManager {
       20
     );
 
-    // Grace period announcement
-    if (this.isInGracePeriod) {
-      const alpha = 1 - this.graceProgress * 0.7;
+    // Grace period announcement with smooth fade-out
+    const FADE_OUT_DURATION = 1.5; // seconds to fade out after grace period
+    const fadeEnd = GRACE_PERIOD + FADE_OUT_DURATION;
+
+    if (this.elapsedTime < fadeEnd) {
+      let alpha: number;
+      if (this.elapsedTime < GRACE_PERIOD) {
+        // During grace period: gently dim from 1.0 → 0.6
+        alpha = 1 - this.graceProgress * 0.4;
+      } else {
+        // After grace period: smoothly fade from 0.6 → 0
+        const fadeProgress = (this.elapsedTime - GRACE_PERIOD) / FADE_OUT_DURATION;
+        alpha = 0.6 * (1 - fadeProgress);
+      }
+
+      // Also drift the text upward during fade-out for a polished feel
+      const baseY = canvasHeight / 2 - 180;
+      const drift = this.elapsedTime >= GRACE_PERIOD
+        ? ((this.elapsedTime - GRACE_PERIOD) / FADE_OUT_DURATION) * 30
+        : 0;
 
       ctx.font = `48px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = `rgba(180, 120, 0, ${alpha})`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Get Ready!', canvasWidth / 2, canvasHeight / 2 - 180);
+      ctx.fillText('Get Ready!', canvasWidth / 2, baseY - drift);
 
       ctx.font = `20px "${FONT_DEFAULT}", monospace`;
       ctx.fillStyle = `rgba(80, 80, 80, ${alpha})`;
-      ctx.fillText('Survive as long as you can', canvasWidth / 2, canvasHeight / 2 - 140);
+      ctx.fillText('Survive as long as you can', canvasWidth / 2, baseY + 40 - drift);
     }
   }
 }
