@@ -17,8 +17,6 @@ import { ScreenShake } from './ScreenShake';
 import { ShatterEffect } from './ShatterEffect';
 import { ImpactEffect } from './ImpactEffect';
 import { BigExplosionEffect } from './BigExplosionEffect';
-import { StreakManager } from './StreakManager';
-import { StreakBar } from './StreakBar';
 import { ScoreProgressBar } from './ScoreProgressBar';
 import stumpDeadSrc from '../assets/images/stumpy/stump_dead.png';
 
@@ -521,9 +519,11 @@ export class Game {
 
       this.treeStump.render(this.ctx);
 
+      const lockedEnemy = this.inputManager.getLockedEnemy();
       for (const enemy of this.enemyManager.getEnemies()) {
-        enemy.render(this.ctx);
+        if (enemy !== lockedEnemy) enemy.render(this.ctx);
       }
+      if (lockedEnemy) lockedEnemy.render(this.ctx);
 
       for (const effect of this.shatterEffects) {
         effect.render(this.ctx);
@@ -572,9 +572,11 @@ export class Game {
       // Render the stump (in dead state) and all enemies frozen in place
       this.treeStump.render(this.ctx);
 
+      const lockedDying = this.inputManager.getLockedEnemy();
       for (const enemy of this.enemyManager.getEnemies()) {
-        enemy.render(this.ctx);
+        if (enemy !== lockedDying) enemy.render(this.ctx);
       }
+      if (lockedDying) lockedDying.render(this.ctx);
 
       // Death shatter explosion
       for (const effect of this.deathShatterEffects) {
