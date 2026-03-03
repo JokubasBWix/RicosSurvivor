@@ -4,6 +4,7 @@ export class MusicManager {
   private gameplay: HTMLAudioElement;
   private current: HTMLAudioElement | null = null;
   private fadeRaf: number = 0;
+  private retryAbort: AbortController | null = null;
 
   constructor() {
     this.gameplay = this.createTrack(themeSrc);
@@ -20,8 +21,22 @@ export class MusicManager {
     this.stopAll();
     this.current = this.gameplay;
     this.gameplay.currentTime = 0;
-    this.gameplay.play().catch(() => {});
-    this.fadeIn(this.gameplay, 0.5);
+    this.gameplay.play().then(() => {
+      if (this.current === this.gameplay) this.fadeIn(this.gameplay, 0.5);
+    }).catch(() => {
+      // Autoplay blocked — retry on first user interaction
+      const ac = new AbortController();
+      this.retryAbort = ac;
+      const retry = () => {
+        ac.abort();
+        if (this.current !== this.gameplay) return;
+        this.gameplay.play().then(() => {
+          if (this.current === this.gameplay) this.fadeIn(this.gameplay, 0.5);
+        }).catch(() => {});
+      };
+      document.addEventListener('keydown', retry, { once: true, signal: ac.signal });
+      document.addEventListener('pointerdown', retry, { once: true, signal: ac.signal });
+    });
   }
 
   playGameOver(): void {
@@ -30,6 +45,10 @@ export class MusicManager {
 
   stopAll(): void {
     cancelAnimationFrame(this.fadeRaf);
+    if (this.retryAbort) {
+      this.retryAbort.abort();
+      this.retryAbort = null;
+    }
     if (this.current) {
       this.fadeOut(this.current, 0.5);
       this.current = null;

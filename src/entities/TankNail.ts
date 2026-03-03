@@ -22,8 +22,7 @@ export class TankNail extends BaseEnemy {
   private dashAngle: number = 0;
   private dashTimer: number = 0;
 
-  public justStartedSpin: boolean = true;  // starts in spin state
-  public justStartedDash: boolean = false;
+  public pendingEvents: string[] = [];
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 55);
@@ -59,7 +58,7 @@ export class TankNail extends BaseEnemy {
         );
         this.dashTimer = 0;
         this.state = 'dashing';
-        this.justStartedDash = true;
+        this.pendingEvents.push('dash');
       }
     } else {
       this.dashTimer += deltaTime;
@@ -78,7 +77,7 @@ export class TankNail extends BaseEnemy {
       if (this.dashTimer >= DASH_DURATION) {
         this.spinTimer = 0;
         this.state = 'spinning';
-        this.justStartedSpin = true;
+        this.pendingEvents.push('spin');
       }
     }
   }

@@ -352,25 +352,3 @@ export function playSpawnerSpawn(ctx: Ctx, dest: Dest): void {
   noise.stop(now + 0.05);
 }
 
-// ── 13. Game start (Get Ready) ──────────────────────────────────────
-export function playGetReady(ctx: Ctx, dest: Dest): void {
-  const now = ctx.currentTime;
-  const notes = [440, 554.37, 659.25]; // A4, C#5, E5 — ascending major
-  const noteDur = 0.12;
-  const gap = 0.03;
-
-  for (let i = 0; i < notes.length; i++) {
-    const t = now + i * (noteDur + gap);
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(notes[i], t);
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.15, t + 0.01);
-    gain.gain.setValueAtTime(0.15, t + noteDur * 0.7);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + noteDur);
-    osc.connect(gain).connect(dest);
-    osc.start(t);
-    osc.stop(t + noteDur);
-  }
-}

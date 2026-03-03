@@ -4,8 +4,12 @@ import { MusicManager } from './MusicManager';
 export class SoundManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private _muted: boolean = false;
+  private _muted: boolean = localStorage.getItem('muted') === 'true';
   private music: MusicManager = new MusicManager();
+
+  constructor() {
+    this.music.setMuted(this._muted);
+  }
 
   /** Lazily create AudioContext on first use (satisfies browser autoplay policy) */
   private ensureContext(): { ctx: AudioContext; dest: GainNode } | null {
@@ -13,6 +17,7 @@ export class SoundManager {
       try {
         this.ctx = new AudioContext();
         this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = this._muted ? 0 : 1;
         this.masterGain.connect(this.ctx.destination);
       } catch {
         return null;
@@ -32,6 +37,7 @@ export class SoundManager {
 
   setMuted(muted: boolean): void {
     this._muted = muted;
+    localStorage.setItem('muted', String(muted));
     if (this.masterGain) {
       this.masterGain.gain.value = muted ? 0 : 1;
     }
@@ -45,70 +51,24 @@ export class SoundManager {
 
   // ── Play methods ──────────────────────────────────────────────────
 
-  playCorrectLetter(): void {
+  private play(fn: (ctx: AudioContext, dest: AudioNode) => void): void {
     const a = this.ensureContext();
-    if (a) SD.playCorrectLetter(a.ctx, a.dest);
+    if (a) fn(a.ctx, a.dest);
   }
 
-  playWrongLetter(): void {
-    const a = this.ensureContext();
-    if (a) SD.playWrongLetter(a.ctx, a.dest);
-  }
+  playCorrectLetter(): void { this.play(SD.playCorrectLetter); }
+  playWrongLetter(): void { this.play(SD.playWrongLetter); }
+  playShoot(): void { this.play(SD.playShoot); }
+  playImpact(): void { this.play(SD.playImpact); }
+  playEnemyDestroyed(): void { this.play(SD.playEnemyDestroyed); }
+  playBigExplosion(): void { this.play(SD.playBigExplosion); }
+  playPlayerDeath(): void { this.play(SD.playPlayerDeath); }
+  playGameOver(): void { this.play(SD.playGameOver); }
+  playSniperShoot(): void { this.play(SD.playSniperShoot); }
+  playTankSpin(): void { this.play(SD.playTankSpin); }
+  playTankDash(): void { this.play(SD.playTankDash); }
+  playSpawnerSpawn(): void { this.play(SD.playSpawnerSpawn); }
 
-  playShoot(): void {
-    const a = this.ensureContext();
-    if (a) SD.playShoot(a.ctx, a.dest);
-  }
-
-  playImpact(): void {
-    const a = this.ensureContext();
-    if (a) SD.playImpact(a.ctx, a.dest);
-  }
-
-  playEnemyDestroyed(): void {
-    const a = this.ensureContext();
-    if (a) SD.playEnemyDestroyed(a.ctx, a.dest);
-  }
-
-  playBigExplosion(): void {
-    const a = this.ensureContext();
-    if (a) SD.playBigExplosion(a.ctx, a.dest);
-  }
-
-  playPlayerDeath(): void {
-    const a = this.ensureContext();
-    if (a) SD.playPlayerDeath(a.ctx, a.dest);
-  }
-
-  playGameOver(): void {
-    const a = this.ensureContext();
-    if (a) SD.playGameOver(a.ctx, a.dest);
-  }
-
-  playSniperShoot(): void {
-    const a = this.ensureContext();
-    if (a) SD.playSniperShoot(a.ctx, a.dest);
-  }
-
-  playTankSpin(): void {
-    const a = this.ensureContext();
-    if (a) SD.playTankSpin(a.ctx, a.dest);
-  }
-
-  playTankDash(): void {
-    const a = this.ensureContext();
-    if (a) SD.playTankDash(a.ctx, a.dest);
-  }
-
-  playSpawnerSpawn(): void {
-    const a = this.ensureContext();
-    if (a) SD.playSpawnerSpawn(a.ctx, a.dest);
-  }
-
-  playGetReady(): void {
-    const a = this.ensureContext();
-    if (a) SD.playGetReady(a.ctx, a.dest);
-  }
 
   // ── Music ───────────────────────────────────────────────────────────
 
@@ -140,7 +100,7 @@ export class SoundManager {
       { name: 'tankSpin', description: 'Tank starts spinning', play: () => this.playTankSpin() },
       { name: 'tankDash', description: 'Tank dashes forward', play: () => this.playTankDash() },
       { name: 'spawnerSpawn', description: 'Spawner creates minion', play: () => this.playSpawnerSpawn() },
-      { name: 'getReady', description: 'Game start / restart', play: () => this.playGetReady() },
+
       { name: 'gameplayMusic', description: 'Background theme (loop)', play: () => this.playGameplayMusic(), stop: () => this.stopMusic() },
       { name: 'gameOverMusic', description: 'Game-over music (no-op)', play: () => this.playGameOverMusic(), stop: () => this.stopMusic() },
     ];

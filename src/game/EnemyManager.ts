@@ -217,15 +217,12 @@ export class EnemyManager {
         enemy.pendingSpawns = [];
       }
 
-      if (enemy instanceof TankNail) {
-        if (enemy.justStartedSpin) {
-          this.onTankSpin?.();
-          enemy.justStartedSpin = false;
+      if (enemy instanceof TankNail && enemy.pendingEvents.length > 0) {
+        for (const ev of enemy.pendingEvents) {
+          if (ev === 'spin') this.onTankSpin?.();
+          else if (ev === 'dash') this.onTankDash?.();
         }
-        if (enemy.justStartedDash) {
-          this.onTankDash?.();
-          enemy.justStartedDash = false;
-        }
+        enemy.pendingEvents = [];
       }
     }
 

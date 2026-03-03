@@ -87,6 +87,9 @@ export class Game {
   // Sound test panel
   private soundPanel: HTMLDivElement;
 
+  // Cleanup
+  private abortController = new AbortController();
+
   constructor(canvas: HTMLCanvasElement, inputElement: HTMLInputElement, words: string[]) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -104,7 +107,6 @@ export class Game {
       () => {},
       (enemy) => {
         this.sound.playCorrectLetter();
-        this.sound.playShoot();
         this.treeStump.triggerAttack();
         this.leafProjectiles.push(
           new LeafProjectile({ ...this.treeStump.position }, enemy)
@@ -132,6 +134,12 @@ export class Game {
     if (deadStumpyImg) deadStumpyImg.src = stumpDeadSrc;
 
     this.soundPanel = this.buildSoundPanel();
+
+    // Sync mute button with persisted state
+    const muteBtn = document.getElementById('mute-btn');
+    if (muteBtn) {
+      muteBtn.textContent = this.sound.muted ? '🔇' : '🔊';
+    }
 
     this.setupCanvas();
     this.setupEventListeners();
@@ -164,17 +172,19 @@ export class Game {
   }
 
   private setupEventListeners(): void {
+    const opts = { signal: this.abortController.signal };
+
     window.addEventListener('resize', () => {
       this.setupCanvas();
       this.treeStump.resize(this.canvas);
-    });
+    }, opts);
 
     const muteBtn = document.getElementById('mute-btn');
     if (muteBtn) {
       muteBtn.addEventListener('click', () => {
         const muted = this.sound.toggleMute();
         muteBtn.textContent = muted ? '🔇' : '🔊';
-      });
+      }, opts);
     }
 
     window.addEventListener('keydown', (e) => {
@@ -232,7 +242,7 @@ export class Game {
       if (e.key === 'r' || e.key === 'R') {
         this.promptRemoveLeaderboardEntry();
       }
-    });
+    }, opts);
 
     this.canvas.addEventListener('click', (e) => {
       if (this.gameState === GameState.GAME_OVER) return;
@@ -248,7 +258,7 @@ export class Game {
         { x: clickX, y: clickY },
         this.treeStump.position
       );
-    });
+    }, opts);
   }
 
   private showDebugMessage(msg: string): void {
@@ -789,7 +799,6 @@ export class Game {
 
   private restart(): void {
     this.hideGameOverOverlay();
-    this.sound.playGetReady();
     this.sound.playGameplayMusic();
     this.gameState = GameState.PLAYING;
     this.score = 0;
@@ -811,10 +820,14 @@ export class Game {
 
   public async start(): Promise<void> {
     await this.leaderboard.init();
-    this.sound.playGetReady();
     this.sound.playGameplayMusic();
     this.lastTime = performance.now();
     this.gameLoop(this.lastTime);
+  }
+
+  public destroy(): void {
+    this.abortController.abort();
+    this.soundPanel.remove();
   }
 
   private gameLoop = (currentTime: number): void => {
