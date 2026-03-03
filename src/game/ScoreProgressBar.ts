@@ -98,6 +98,33 @@ export class ScoreProgressBar {
 
     ctx.restore();
 
+    // Draw current score number inside the filled bar, near the right edge
+    if (currentScore > 0 && this.currentFill > 1) {
+      const SCORE_FONT_SIZE = 14;
+      ctx.save();
+      ctx.font = `bold ${SCORE_FONT_SIZE}px "${FONT_DEFAULT}", monospace`;
+      ctx.textBaseline = 'middle';
+
+      const scoreText = `${currentScore}`;
+      const scoreTextW = ctx.measureText(scoreText).width;
+      const pad = 6;
+
+      const scoreX = barX + this.currentFill - scoreTextW - pad;
+      const scoreY = barY + BAR_HEIGHT / 2;
+
+      // Black outline
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(scoreText, scoreX, scoreY);
+
+      // White fill
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(scoreText, scoreX, scoreY);
+
+      ctx.restore();
+    }
+
     // Select and render checkpoints
     const checkpoints = this.selectCheckpoints(entries, currentScore);
     this.renderCheckpoints(ctx, barX, barY, barWidth, barMax, checkpoints);
@@ -191,11 +218,7 @@ export class ScoreProgressBar {
     for (const cp of checkpoints) {
       const tickX = barX + (cp.score / barMax) * barWidth;
 
-      let text = `#${cp.rank} ${cp.name}`;
-      if (cp.tiedCount > 1) {
-        text += ` +${cp.tiedCount - 1}`;
-      }
-      text += ` · ${cp.score}`;
+      const text = `#${cp.rank} ${cp.name} ${cp.score}`;
 
       const textW = ctx.measureText(text).width;
       const pillW = textW + PILL_PAD_X * 2;
