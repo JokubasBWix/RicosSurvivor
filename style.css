@@ -19,6 +19,34 @@ input#input {
   pointer-events: none;
 }
 
+/* Mute button */
+#mute-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 200;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+
+#mute-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.55);
+}
+
 /* Game Over Overlay */
 #game-over-overlay {
   position: fixed;
