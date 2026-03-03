@@ -14,6 +14,9 @@ export class ZigzagNail extends BaseEnemy {
   private sweepRange: number;
   private steerSpeed: number = 2.5;
   private facingAngle: number = 0;
+  private state: 'sweeping' | 'cooldown' = 'sweeping';
+  private cooldownTimer: number = 0;
+  private cooldownDuration: number = 0;
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 32);
@@ -45,23 +48,44 @@ export class ZigzagNail extends BaseEnemy {
       if (dist > 0) {
         this.facingAngle = Math.atan2(dy, dx);
 
-        this.sweepAngle += this.sweepDirection * this.sweepSpeed * deltaTime;
-        if (Math.abs(this.sweepAngle) >= this.sweepRange) {
-          this.sweepAngle = Math.sign(this.sweepAngle) * this.sweepRange;
-          this.sweepDirection *= -1;
+        if (this.state === 'sweeping') {
+          this.sweepAngle += this.sweepDirection * this.sweepSpeed * deltaTime;
+          if (Math.abs(this.sweepAngle) >= this.sweepRange) {
+            this.sweepAngle = Math.sign(this.sweepAngle) * this.sweepRange;
+            this.sweepDirection *= -1;
+            this.state = 'cooldown';
+            this.cooldownDuration = 0.4 + Math.random() * 0.4;
+            this.cooldownTimer = 0;
+          }
+
+          const targetAngle = this.facingAngle + this.sweepAngle;
+          let angleDiff = targetAngle - this.moveAngle;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          this.moveAngle += angleDiff * this.steerSpeed * deltaTime;
+
+          const sweepProgress = Math.abs(this.sweepAngle) / this.sweepRange;
+          const speed = this.baseSpeed * (2 + 22.5 * (1 - sweepProgress));
+
+          this.velocity.x = Math.cos(this.moveAngle) * speed;
+          this.velocity.y = Math.sin(this.moveAngle) * speed;
+        } else {
+          this.cooldownTimer += deltaTime;
+
+          let angleDiff = this.facingAngle - this.moveAngle;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          this.moveAngle += angleDiff * 0.4 * deltaTime;
+
+          const driftSpeed = this.baseSpeed * 1.5;
+          this.velocity.x = Math.cos(this.moveAngle) * driftSpeed;
+          this.velocity.y = Math.sin(this.moveAngle) * driftSpeed;
+
+          if (this.cooldownTimer >= this.cooldownDuration) {
+            this.state = 'sweeping';
+            this.sweepAngle = 0;
+          }
         }
-
-        const targetAngle = this.facingAngle + this.sweepAngle;
-        let angleDiff = targetAngle - this.moveAngle;
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        this.moveAngle += angleDiff * this.steerSpeed * deltaTime;
-
-        const sweepProgress = Math.abs(this.sweepAngle) / this.sweepRange;
-        const speed = this.baseSpeed * (2 + 22.5 * (1 - sweepProgress));
-
-        this.velocity.x = Math.cos(this.moveAngle) * speed;
-        this.velocity.y = Math.sin(this.moveAngle) * speed;
       }
     }
 

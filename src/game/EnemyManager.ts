@@ -1,6 +1,5 @@
 import { Enemy, EnemyType, Position } from '../types';
 import { EnemyFactory } from './EnemyFactory';
-import { SpawnerNail } from '../entities/SpawnerNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
 import { FONT_DEFAULT } from './FontLoader';
@@ -19,7 +18,7 @@ const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
   { type: 'zigzag',  unlockTime: 30,  baseInterval: 4000, minInterval: 1200 },
   { type: 'speed',   unlockTime: 60,  baseInterval: 3500, minInterval: 1000 },
   { type: 'tank',    unlockTime: 75,  baseInterval: 5000, minInterval: 1800 },
-  { type: 'spawner', unlockTime: 90,  baseInterval: 8000, minInterval: 3000 },
+  { type: 'stalker', unlockTime: 90,  baseInterval: 8000, minInterval: 3000 },
   { type: 'sniper',  unlockTime: 100, baseInterval: 8000, minInterval: 3000 },
 ];
 
@@ -194,12 +193,6 @@ export class EnemyManager {
     for (const enemy of this.enemies) {
       enemy.update(deltaTime, { x: targetX, y: targetY });
 
-      if (enemy instanceof SpawnerNail && enemy.pendingSpawns.length > 0) {
-        for (const child of enemy.pendingSpawns) {
-          this.addChildWithUniqueLetter(child, this.words, usedLetters);
-        }
-        enemy.pendingSpawns = [];
-      }
 
       if (enemy instanceof Sniper && enemy.pendingSpawns.length > 0) {
         for (const child of enemy.pendingSpawns) {
@@ -228,7 +221,7 @@ export class EnemyManager {
   }
 
   /**
-   * Attempt to add a child enemy (from SpawnerNail / Sniper) ensuring its
+   * Attempt to add a child enemy (from Sniper) ensuring its
    * first letter is unique. If the child's current word conflicts, try to
    * reassign it from the given word pool. If no free letter exists, discard.
    */

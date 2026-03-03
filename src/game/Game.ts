@@ -2,7 +2,7 @@ import { TreeStump } from '../entities/TreeStump';
 import { LeafProjectile } from '../entities/LeafProjectile';
 import { Nail } from '../entities/Nail';
 import { ZigzagNail } from '../entities/ZigzagNail';
-import { SpawnerNail } from '../entities/SpawnerNail';
+import { StalkerNail } from '../entities/StalkerNail';
 import { TankNail } from '../entities/TankNail';
 import { SpeedNail } from '../entities/SpeedNail';
 import { Sniper } from '../entities/Sniper';
@@ -20,12 +20,12 @@ import { BigExplosionEffect } from './BigExplosionEffect';
 import { ScoreProgressBar } from './ScoreProgressBar';
 import stumpDeadSrc from '../assets/images/stumpy/stump_dead.png';
 
-const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'spawner', 'tank', 'speed', 'sniper'];
+const ENEMY_TYPES: EnemyType[] = ['nail', 'zigzag', 'stalker', 'tank', 'speed', 'sniper'];
 
 const ENEMY_TYPE_COLORS: Record<EnemyType, string> = {
   nail:    '#ff9966',
   zigzag:  '#6688ff',
-  spawner: '#ff66ff',
+  stalker: '#ff66ff',
   tank:    '#ff6666',
   speed:   '#66ff66',
   sniper:  '#ff4444'
@@ -681,7 +681,7 @@ export class Game {
 
   private getEnemyType(enemy: Enemy): EnemyType {
     if (enemy instanceof ZigzagNail) return 'zigzag';
-    if (enemy instanceof SpawnerNail) return 'spawner';
+    if (enemy instanceof StalkerNail) return 'stalker';
     if (enemy instanceof TankNail) return 'tank';
     if (enemy instanceof SpeedNail) return 'speed';
     if (enemy instanceof Sniper) return 'sniper';
