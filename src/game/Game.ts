@@ -530,9 +530,11 @@ export class Game {
 
       this.treeStump.render(this.ctx);
 
+      const lockedEnemy = this.inputManager.getLockedEnemy();
       for (const enemy of this.enemyManager.getEnemies()) {
-        enemy.render(this.ctx);
+        if (enemy !== lockedEnemy) enemy.render(this.ctx);
       }
+      if (lockedEnemy) lockedEnemy.render(this.ctx);
 
       for (const effect of this.shatterEffects) {
         effect.render(this.ctx);
@@ -581,9 +583,11 @@ export class Game {
       // Render the stump (in dead state) and all enemies frozen in place
       this.treeStump.render(this.ctx);
 
+      const lockedDying = this.inputManager.getLockedEnemy();
       for (const enemy of this.enemyManager.getEnemies()) {
-        enemy.render(this.ctx);
+        if (enemy !== lockedDying) enemy.render(this.ctx);
       }
+      if (lockedDying) lockedDying.render(this.ctx);
 
       // Death shatter explosion
       for (const effect of this.deathShatterEffects) {

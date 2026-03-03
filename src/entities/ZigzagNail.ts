@@ -6,17 +6,24 @@ export class ZigzagNail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
   private imageHeight: number = 85;
-  private oscillationTimer: number = 0;
-  private oscillationFrequency: number;
-  private oscillationAmplitude: number;
   private baseSpeed: number;
+  private moveAngle: number;
+  private sweepAngle: number;
+  private sweepDirection: number;
+  private sweepSpeed: number;
+  private sweepRange: number;
+  private steerSpeed: number = 2.5;
+  private facingAngle: number = 0;
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 32);
 
     this.baseSpeed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
-    this.oscillationFrequency = 2 + Math.random() * 2;
-    this.oscillationAmplitude = 60 + Math.random() * 40;
+    this.moveAngle = Math.atan2(velocity.y, velocity.x);
+    this.sweepSpeed = 1.5 + Math.random() * 1;
+    this.sweepRange = Math.PI / 1.5 + Math.random() * (Math.PI / 4);
+    this.sweepAngle = 0;
+    this.sweepDirection = Math.random() < 0.5 ? 1 : -1;
 
     if (!ZigzagNail.image) {
       ZigzagNail.image = new Image();
@@ -29,27 +36,32 @@ export class ZigzagNail extends BaseEnemy {
 
   update(deltaTime: number, targetPosition?: Position): void {
     this.updateScale(deltaTime);
-    this.oscillationTimer += deltaTime;
 
     if (targetPosition) {
       const dx = targetPosition.x - this.position.x;
       const dy = targetPosition.y - this.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance > 0) {
-        const speed = this.baseSpeed;
-        const dirX = dx / distance;
-        const dirY = dy / distance;
+      if (dist > 0) {
+        this.facingAngle = Math.atan2(dy, dx);
 
-        // Perpendicular direction for zigzag
-        const perpX = -dirY;
-        const perpY = dirX;
+        this.sweepAngle += this.sweepDirection * this.sweepSpeed * deltaTime;
+        if (Math.abs(this.sweepAngle) >= this.sweepRange) {
+          this.sweepAngle = Math.sign(this.sweepAngle) * this.sweepRange;
+          this.sweepDirection *= -1;
+        }
 
-        const oscOffset = Math.sin(this.oscillationTimer * this.oscillationFrequency * Math.PI * 2);
-        const lateralSpeed = oscOffset * this.oscillationAmplitude;
+        const targetAngle = this.facingAngle + this.sweepAngle;
+        let angleDiff = targetAngle - this.moveAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        this.moveAngle += angleDiff * this.steerSpeed * deltaTime;
 
-        this.velocity.x = dirX * speed + perpX * lateralSpeed;
-        this.velocity.y = dirY * speed + perpY * lateralSpeed;
+        const sweepProgress = Math.abs(this.sweepAngle) / this.sweepRange;
+        const speed = this.baseSpeed * (2 + 22.5 * (1 - sweepProgress));
+
+        this.velocity.x = Math.cos(this.moveAngle) * speed;
+        this.velocity.y = Math.sin(this.moveAngle) * speed;
       }
     }
 
@@ -58,15 +70,16 @@ export class ZigzagNail extends BaseEnemy {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    const angle = Math.atan2(this.velocity.y, this.velocity.x);
-
     if (ZigzagNail.imageLoaded && ZigzagNail.image) {
       const aspectRatio = ZigzagNail.image.width / ZigzagNail.image.height;
       const imageWidth = this.imageHeight * aspectRatio;
+      const moveAngle = Math.atan2(this.velocity.y, this.velocity.x);
+      const facingRight = Math.abs(this.facingAngle) < Math.PI / 2;
 
       ctx.save();
       ctx.translate(this.position.x, this.position.y);
-      ctx.rotate(angle + Math.PI / 2);
+      ctx.rotate(moveAngle + Math.PI);
+      if (facingRight) ctx.scale(1, -1);
       ctx.drawImage(
         ZigzagNail.image,
         -imageWidth / 2,

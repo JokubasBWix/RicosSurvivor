@@ -2,14 +2,12 @@ import { Enemy, Position, Velocity } from '../types';
 import { FONT_DEFAULT } from '../game/FontLoader';
 
 // Typing-feedback constants
-const LOCKED_TEXT_COLOR = '#b8860b';          // dark goldenrod
-const LOCKED_GLOW_COLOR = '#daa520';          // goldenrod glow
-const LOCKED_GLOW_BLUR = 10;
 const UNLOCKED_TEXT_COLOR = '#2a2a2a';
-const TYPED_FADED_COLOR = 'rgba(184, 134, 11, 0.3)'; // faded golden for progress trail
+const LOCKED_REMAINING_COLOR = '#f0e6c8';             // warm cream for untyped letters on dark pill
+const LOCKED_TYPED_COLOR = 'rgba(218, 165, 32, 0.45)'; // muted gold for already-typed letters
 const BG_DEFAULT = 'rgba(255, 255, 255, 0.55)';
-const BG_LOCKED = 'rgba(212, 175, 55, 0.15)';
-const BG_LOCKED_BORDER = 'rgba(184, 134, 11, 0.35)';
+const BG_LOCKED = 'rgba(48, 40, 20, 0.92)';
+const BG_LOCKED_BORDER = 'rgba(184, 134, 11, 0.6)';
 const SCALE_DECAY_SPEED = 12; // how fast scale pops back to 1.0
 
 export abstract class BaseEnemy implements Enemy {
@@ -66,34 +64,42 @@ export abstract class BaseEnemy implements Enemy {
     const isLocked = this.typed.length > 0;
     const typedPart = this.word.substring(0, this.typed.length);
     const remaining = this.word.substring(this.typed.length);
-    const wordY = this.position.y - this.radius - 20;
 
     ctx.save();
 
-    // --- Apply scale pop around the word center ---
-    ctx.translate(this.position.x, wordY);
-    ctx.scale(this.typedScale, this.typedScale);
-    ctx.translate(-this.position.x, -wordY);
-
+    // Set font before measuring so we can clamp before applying the scale transform
     ctx.font = `${this.fontSize}px "${this.fontFamily}", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Measure the full word so background pill covers everything
     const fullMetrics = ctx.measureText(this.word);
     const remainingMetrics = ctx.measureText(remaining);
     const typedMetrics = ctx.measureText(typedPart);
     const padX = 6;
     const padY = 4;
 
-    // Background pill — covers the full word width for stability
     const pillW = (isLocked ? fullMetrics.width : remainingMetrics.width) + padX * 2;
     const pillH = this.fontSize + padY * 2;
-    const pillX = this.position.x - pillW / 2;
+
+    // Compute word center, then clamp so the pill stays fully on-screen
+    let wordX = this.position.x;
+    let wordY = this.position.y - this.radius - 20;
+
+    const screenMargin = 4;
+    const cw = ctx.canvas.width;
+    const ch = ctx.canvas.height;
+    wordX = Math.max(pillW / 2 + screenMargin, Math.min(cw - pillW / 2 - screenMargin, wordX));
+    wordY = Math.max(this.fontSize / 2 + padY + screenMargin, Math.min(ch - this.fontSize / 2 - padY - screenMargin, wordY));
+
+    // Apply scale pop around the (clamped) word center
+    ctx.translate(wordX, wordY);
+    ctx.scale(this.typedScale, this.typedScale);
+    ctx.translate(-wordX, -wordY);
+
+    const pillX = wordX - pillW / 2;
     const pillY = wordY - this.fontSize / 2 - padY;
 
     if (isLocked) {
-      // Golden-tinted pill with subtle border
       ctx.fillStyle = BG_LOCKED;
       ctx.strokeStyle = BG_LOCKED_BORDER;
       ctx.lineWidth = 1;
@@ -109,21 +115,19 @@ export abstract class BaseEnemy implements Enemy {
     }
 
     if (isLocked) {
-      // -- Draw typed (completed) letters as faded golden progress trail --
       const halfFullWidth = fullMetrics.width / 2;
-      const typedX = this.position.x - halfFullWidth + typedMetrics.width / 2;
+      const typedX = wordX - halfFullWidth + typedMetrics.width / 2;
 
-      ctx.fillStyle = TYPED_FADED_COLOR;
+      ctx.fillStyle = LOCKED_TYPED_COLOR;
       ctx.fillText(typedPart, typedX, wordY);
 
-      // -- Draw remaining letters with golden color + glow --
-      const remainingX = this.position.x - halfFullWidth + typedMetrics.width + remainingMetrics.width / 2;
+      const remainingX = wordX - halfFullWidth + typedMetrics.width + remainingMetrics.width / 2;
 
-      ctx.fillStyle = UNLOCKED_TEXT_COLOR;
+      ctx.fillStyle = LOCKED_REMAINING_COLOR;
       ctx.fillText(remaining, remainingX, wordY);
     } else {
       ctx.fillStyle = UNLOCKED_TEXT_COLOR;
-      ctx.fillText(remaining, this.position.x, wordY);
+      ctx.fillText(remaining, wordX, wordY);
     }
 
     ctx.restore();
