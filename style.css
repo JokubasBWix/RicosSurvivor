@@ -134,8 +134,8 @@ input#input {
 }
 
 .overlay-wave {
-  font-size: 22px;
-  color: #aaccff;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.7);
   margin: 4px 0 0 0;
 }
 
@@ -312,7 +312,7 @@ input#input {
 
 /* Dead Stumpy on game over */
 .dead-stumpy {
-  width: 240px;
+  width: 260px;
   height: auto;
   margin: 20px auto 0 calc(50% - 240px);
   display: block;
