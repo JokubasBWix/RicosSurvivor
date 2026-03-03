@@ -1050,16 +1050,16 @@
     "date": "2026-02-16T06:47:34.616Z"
   },
   {
+    "name": "Martin",
+    "score": 36,
+    "survivalTime": 79.25930000000056,
+    "date": "2026-03-03T13:04:45.798Z"
+  },
+  {
     "name": "Roman",
     "score": 35,
     "survivalTime": 80.17,
     "date": "2026-02-21T13:00:34.940Z"
-  },
-  {
-    "name": "Martin",
-    "score": 34,
-    "survivalTime": 79.25930000000056,
-    "date": "2026-03-02T14:22:21.979Z"
   },
   {
     "name": "Nyx",
