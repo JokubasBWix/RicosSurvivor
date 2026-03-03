@@ -35,7 +35,7 @@ input#input {
 }
 
 #game-over-overlay.visible {
-  background: rgba(0, 0, 0, 0.88);
+  background: rgba(0, 0, 0, 0.55);
 }
 
 #game-over-overlay.hidden {
@@ -235,6 +235,28 @@ input#input {
   list-style: none;
   padding: 0;
   margin: 0;
+  max-height: 420px;        /* ~10 rows visible at a time */
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling */
+.leaderboard-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leaderboard-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.leaderboard-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.leaderboard-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .leaderboard-list li {
@@ -292,7 +314,7 @@ input#input {
 .dead-stumpy {
   width: 240px;
   height: auto;
-  margin: 20px auto 0 auto;
+  margin: 20px auto 0 calc(50% - 240px);
   display: block;
   opacity: 0.85;
   transform: rotate(0deg);

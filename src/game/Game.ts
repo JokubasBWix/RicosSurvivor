@@ -17,8 +17,6 @@ import { ScreenShake } from './ScreenShake';
 import { ShatterEffect } from './ShatterEffect';
 import { ImpactEffect } from './ImpactEffect';
 import { BigExplosionEffect } from './BigExplosionEffect';
-import { StreakManager } from './StreakManager';
-import { StreakBar } from './StreakBar';
 import { ScoreProgressBar } from './ScoreProgressBar';
 import stumpDeadSrc from '../assets/images/stumpy/stump_dead.png';
 
@@ -132,10 +130,10 @@ export class Game {
   }
 
   private setupOverlayListeners(): void {
-    this.saveBtn.addEventListener('click', () => {
+    this.saveBtn.addEventListener('click', async () => {
       const name = this.playerNameInput.value.trim();
       if (!name) return;
-      this.leaderboard.addEntry(name, this.score, this.enemyManager.survivalTime);
+      await this.leaderboard.addEntry(name, this.score, this.enemyManager.survivalTime);
       this.scoreSaved = true;
       this.nameInputSection.classList.add('hidden');
       this.renderLeaderboardList();
@@ -197,8 +195,7 @@ export class Game {
 
       // L clears entire leaderboard
       if (e.key === 'l' || e.key === 'L') {
-        this.leaderboard.clear();
-        this.showDebugMessage('Leaderboard cleared');
+        this.leaderboard.clear().then(() => this.showDebugMessage('Leaderboard cleared'));
       }
 
       // R prompts to remove a leaderboard entry
@@ -229,7 +226,7 @@ export class Game {
     this.debugMessageTimer = 2;
   }
 
-  private promptRemoveLeaderboardEntry(): void {
+  private async promptRemoveLeaderboardEntry(): Promise<void> {
     const entries = this.leaderboard.getEntries();
     if (entries.length === 0) {
       this.showDebugMessage('Leaderboard is empty');
@@ -247,7 +244,7 @@ export class Game {
     }
 
     const removed = entries[idx];
-    this.leaderboard.removeEntry(idx);
+    await this.leaderboard.removeEntry(idx);
     this.showDebugMessage(`Removed: ${removed.name}`);
   }
 
@@ -303,17 +300,19 @@ export class Game {
 
     this.leaderboardEmpty.classList.add('hidden');
 
+    let highlightedLi: HTMLLIElement | null = null;
+
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const li = document.createElement('li');
 
-      // Highlight the just-saved entry
+      // Highlight the player's entry (even if score wasn't beaten)
       if (
         this.scoreSaved &&
-        entry.name === this.playerNameInput.value.trim() &&
-        entry.score === this.score
+        entry.name.toLowerCase() === this.playerNameInput.value.trim().toLowerCase()
       ) {
         li.classList.add('highlight');
+        if (!highlightedLi) highlightedLi = li;
       }
 
       const timeStr = entry.survivalTime != null
@@ -327,6 +326,16 @@ export class Game {
         <span class="entry-score">${entry.score}</span>
       `;
       this.leaderboardList.appendChild(li);
+    }
+
+    // Scroll to the highlighted (newly saved) entry
+    if (highlightedLi) {
+      requestAnimationFrame(() => {
+        highlightedLi!.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    } else {
+      // Reset scroll to the top when no highlight
+      this.leaderboardList.scrollTop = 0;
     }
   }
 
@@ -351,8 +360,8 @@ export class Game {
 
       this.deathTimer -= deltaTime;
 
-      // Ramp the dark fade up to match the overlay bg (~0.88)
-      this.deathFadeAlpha = Math.min(0.88, this.deathFadeAlpha + deltaTime * 1.6);
+      // Ramp the dark fade up to match the overlay bg (~0.55)
+      this.deathFadeAlpha = Math.min(0.55, this.deathFadeAlpha + deltaTime * 1.0);
 
       // Update death shatter effects
       for (const effect of this.deathShatterEffects) {
@@ -592,10 +601,10 @@ export class Game {
       }
     }
 
-    // Once in GAME_OVER, keep the canvas dark so the sunburst doesn't flash
-    // through before the HTML overlay is fully visible
+    // In GAME_OVER, apply a semi-transparent dark tint so the sunburst
+    // spinning effect stays visible through the overlay
     if (this.gameState === GameState.GAME_OVER) {
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
   }
@@ -695,7 +704,8 @@ export class Game {
     this.inputManager.focus();
   }
 
-  public start(): void {
+  public async start(): Promise<void> {
+    await this.leaderboard.init();
     this.lastTime = performance.now();
     this.gameLoop(this.lastTime);
   }
