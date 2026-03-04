@@ -109,7 +109,7 @@ export class EnemyManager {
   private initSpawnTimers(): void {
     this.spawnTimers = SURVIVAL_CONFIG.map(config => ({
       config,
-      timer: 0,
+      timer: config.baseInterval,
     }));
   }
 
