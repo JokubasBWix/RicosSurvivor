@@ -46,6 +46,7 @@ export class Sniper extends BaseEnemy {
     super(word, position, velocity, 50);
     this.fontFamily = FONT_SNIPER;
     this.fontSize = 30;
+    this.displayUppercase = true;
     this.playerPosition = { ...playerPosition };
     this.words = words;
 
