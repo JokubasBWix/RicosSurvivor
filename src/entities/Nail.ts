@@ -5,7 +5,7 @@ import nailImg from '../assets/images/nail.png';
 export class Nail extends BaseEnemy {
   private static image: HTMLImageElement | null = null;
   private static imageLoaded: boolean = false;
-  private imageHeight: number = 50;
+  private imageHeight: number = 85;
 
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 20);
@@ -38,7 +38,7 @@ export class Nail extends BaseEnemy {
 
       ctx.save();
       ctx.translate(this.position.x, this.position.y);
-      ctx.rotate(angle + Math.PI / 2);
+      ctx.rotate(angle + Math.PI);
       ctx.drawImage(
         Nail.image,
         -imageWidth / 2,

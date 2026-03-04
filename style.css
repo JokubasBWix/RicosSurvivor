@@ -19,7 +19,156 @@ input#input {
   pointer-events: none;
 }
 
-/* Game Over Overlay */
+/* Mute button */
+#mute-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 200;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+
+#mute-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* ── Start Screen Overlay ── */
+#start-screen-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  padding: 60px 0 0 0;
+  overflow: hidden;
+  transition: background 0.3s ease-out;
+}
+
+#start-screen-overlay.exiting {
+  background: transparent;
+  pointer-events: none;
+}
+
+#start-screen-overlay.hidden {
+  display: none;
+}
+
+.start-title {
+  font-size: 56px;
+  color: #66ff99;
+  margin: 0 0 0 0;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  text-align: center;
+  transition: transform 0.5s cubic-bezier(0.55, 0, 1, 0.45), opacity 0.3s ease-out;
+}
+
+.start-title.exit-up {
+  transform: translateY(-120vh);
+  opacity: 0;
+}
+
+.start-below-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  margin-top: 48px;
+  overflow: hidden;
+  transition: transform 0.4s ease-in, opacity 0.3s ease-out;
+}
+
+.start-below-title.exit-down {
+  transform: translateY(50px);
+  opacity: 0;
+}
+
+.start-name-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+#start-player-name {
+  font-family: monospace;
+  font-size: 18px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  outline: none;
+  width: 240px;
+  text-align: center;
+}
+
+#start-player-name:focus {
+  border-color: rgba(102, 255, 153, 0.6);
+}
+
+#start-player-name::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.start-hint {
+  font-size: 15px;
+  color: rgba(200, 200, 200, 0.45);
+  margin: 0;
+}
+
+.start-hint kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* Start screen Stumpy */
+.start-stumpy {
+  width: 260px;
+  height: 260px;
+  display: block;
+  margin: 0 auto 24px auto;
+  opacity: 0.9;
+}
+
+/* Flying Stumpy clone – used during start-game animation */
+.stumpy-flying {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  transition: left 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              top 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              height 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── Game Over Overlay ── */
 #game-over-overlay {
   position: fixed;
   inset: 0;
@@ -101,7 +250,7 @@ input#input {
   align-items: center;
   width: 100%;
   flex: 1;
-  margin-top: 80px;
+  margin-top: 40px;
   overflow: hidden;
   opacity: 0;
   transform: translateY(24px);
@@ -124,7 +273,7 @@ input#input {
 
 /* Stats section */
 .overlay-stats {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .overlay-score {
@@ -139,63 +288,6 @@ input#input {
   margin: 4px 0 0 0;
 }
 
-/* Name input */
-.name-input-section {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.name-input-section.hidden {
-  display: none;
-}
-
-#player-name {
-  font-family: monospace;
-  font-size: 16px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  color: white;
-  outline: none;
-  width: 180px;
-}
-
-#player-name:focus {
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
-#player-name::placeholder {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-/* Buttons */
-.overlay-btn {
-  font-family: monospace;
-  font-size: 16px;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.save-btn {
-  background: rgba(80, 200, 120, 0.25);
-  color: #66ff99;
-  border-color: rgba(80, 200, 120, 0.5);
-}
-
-.save-btn:hover {
-  background: rgba(80, 200, 120, 0.4);
-}
-
-.save-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 
 /* Restart hint - pinned to bottom */
 .overlay-hint {
@@ -221,6 +313,10 @@ input#input {
   margin: 8px 0;
   text-align: left;
   width: 100%;
+}
+
+#game-over-overlay .leaderboard-section {
+  margin-top: auto;
 }
 
 .leaderboard-title {
@@ -314,7 +410,9 @@ input#input {
 .dead-stumpy {
   width: 260px;
   height: auto;
-  margin: 20px auto 0 calc(50% - 240px);
+  margin: -20px auto 80px auto;
+  position: relative;
+  left: -120px;
   display: block;
   opacity: 0.85;
   transform: rotate(0deg);

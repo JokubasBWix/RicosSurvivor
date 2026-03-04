@@ -9,6 +9,29 @@
 <body>
   <canvas id="game"></canvas>
   <input id="input" autocomplete="off" placeholder="Type here..." autofocus />
+  <button id="mute-btn" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+
+  <!-- Start Screen Overlay -->
+  <div id="start-screen-overlay">
+    <div class="overlay-content">
+      <h1 class="start-title">RICO'S SURVIVOR</h1>
+
+      <div class="start-below-title">
+        <img id="start-stumpy" class="start-stumpy" alt="Stumpy" />
+
+        <div class="start-name-section">
+          <input id="start-player-name" type="text" maxlength="20" placeholder="Enter your name..." autocomplete="off" />
+          <p class="start-hint">Press <kbd>Enter</kbd> to start</p>
+        </div>
+
+        <div class="leaderboard-section">
+          <h2 class="leaderboard-title">Leaderboard</h2>
+          <ol id="start-leaderboard-list" class="leaderboard-list"></ol>
+          <p id="start-leaderboard-empty" class="leaderboard-empty hidden">No scores yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Game Over Overlay -->
   <div id="game-over-overlay" class="hidden">
@@ -16,14 +39,11 @@
       <h1 class="overlay-title">GAME OVER</h1>
 
       <div class="overlay-below-title">
+        <img id="dead-stumpy" class="dead-stumpy" alt="Dead Stumpy" />
+
         <div class="overlay-stats">
           <p id="overlay-score" class="overlay-score"></p>
           <p id="overlay-wave" class="overlay-wave"></p>
-        </div>
-
-        <div id="name-input-section" class="name-input-section">
-          <input id="player-name" type="text" maxlength="20" placeholder="Enter your name..." autocomplete="off" />
-          <button id="save-score-btn" class="overlay-btn save-btn">Save Score</button>
         </div>
 
         <div class="leaderboard-section">
@@ -32,9 +52,7 @@
           <p id="leaderboard-empty" class="leaderboard-empty hidden">No scores yet</p>
         </div>
 
-        <img id="dead-stumpy" class="dead-stumpy" alt="Dead Stumpy" />
-
-        <p class="overlay-hint">Press <kbd>Esc</kbd> to restart</p>
+        <p class="overlay-hint">Press <kbd>Esc</kbd> for menu</p>
       </div>
     </div>
   </div>
