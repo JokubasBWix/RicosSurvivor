@@ -1,6 +1,6 @@
 import { Enemy, EnemyType, Position } from '../types';
 import { EnemyFactory } from './EnemyFactory';
-import { SpawnerNail } from '../entities/SpawnerNail';
+import { SpeedNail } from '../entities/SpeedNail';
 import { TankNail } from '../entities/TankNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
@@ -20,7 +20,7 @@ const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
   { type: 'zigzag',  unlockTime: 30,  baseInterval: 4000, minInterval: 1200 },
   { type: 'speed',   unlockTime: 60,  baseInterval: 3500, minInterval: 1000 },
   { type: 'tank',    unlockTime: 75,  baseInterval: 5000, minInterval: 1800 },
-  { type: 'spawner', unlockTime: 90,  baseInterval: 8000, minInterval: 3000 },
+  { type: 'stalker', unlockTime: 90,  baseInterval: 8000, minInterval: 3000 },
   { type: 'sniper',  unlockTime: 100, baseInterval: 8000, minInterval: 3000 },
 ];
 
@@ -34,6 +34,14 @@ interface SpawnTimer {
   config: SurvivalSpawnConfig;
   timer: number; // ms accumulated since last spawn
 }
+
+interface PendingSpawn {
+  enemy: Enemy;
+  delay: number; // seconds remaining before activation
+}
+
+const SPEED_BURST_COUNT = 3;
+const SPEED_BURST_DELAY = 0.15; // seconds between each in the burst
 
 // ── EnemyManager ─────────────────────────────────────────────────────
 
@@ -52,6 +60,7 @@ export class EnemyManager {
   private elapsedTime: number = 0;          // seconds since game start
   private graceProgress: number = 0;        // 0 → 1 during grace period
   private spawnTimers: SpawnTimer[] = [];
+  private pendingSpawns: PendingSpawn[] = [];
 
   constructor(words: string[]) {
     this.words = words;
@@ -106,6 +115,7 @@ export class EnemyManager {
 
   reset(): void {
     this.enemies = [];
+    this.pendingSpawns = [];
     this.elapsedTime = 0;
     this.graceProgress = 0;
     this.initSpawnTimers();
@@ -153,11 +163,13 @@ export class EnemyManager {
     const speedMult = this.speedMultiplier;
     const usedLetters = this.getUsedFirstLetters();
 
+    for (const ps of this.pendingSpawns) {
+      usedLetters.add(ps.enemy.word[0]);
+    }
+
     for (const st of this.spawnTimers) {
-      // Skip types not yet unlocked
       if (this.elapsedTime < st.config.unlockTime) continue;
 
-      // Compute current interval (shrinks over time)
       const timeSinceUnlock = this.elapsedTime - st.config.unlockTime;
       const rampT = Math.min(timeSinceUnlock / DIFFICULTY_RAMP_DURATION, 1);
       const currentInterval =
@@ -166,8 +178,14 @@ export class EnemyManager {
       st.timer += deltaTime * 1000;
 
       if (st.timer >= currentInterval) {
+        if (st.config.type === 'speed') {
+          this.enqueueSpeedBurst(canvas, targetX, targetY, speedMult, usedLetters);
+          st.timer = 0;
+          continue;
+        }
+
         const word = this.getWordForType(st.config.type, usedLetters);
-        if (!word) continue; // no unique first letter – keep timer, retry next tick
+        if (!word) continue;
 
         const wordsForType = st.config.type === 'sniper' ? SNIPER_WORDS : this.words;
         const enemy = EnemyFactory.create(
@@ -180,12 +198,55 @@ export class EnemyManager {
           speedMult
         );
         this.enemies.push(enemy);
-        usedLetters.add(word[0]); // mark this letter as taken for subsequent spawns this tick
+        usedLetters.add(word[0]);
         st.timer = 0;
       }
     }
 
+    this.tickPendingSpawns(deltaTime);
     this.updateEnemies(deltaTime, canvas, targetX, targetY);
+  }
+
+  // ── Speed burst spawning ─────────────────────────────────────────
+
+  private enqueueSpeedBurst(
+    canvas: HTMLCanvasElement,
+    targetX: number,
+    targetY: number,
+    speedMult: number,
+    usedLetters: Set<string>
+  ): void {
+    const { min, max } = EnemyFactory.getSpeedRange('speed', speedMult);
+    const cornerIndex = Math.floor(Math.random() * 4);
+
+    for (let i = 0; i < SPEED_BURST_COUNT; i++) {
+      const word = this.getWordForType('speed', usedLetters);
+      if (!word) break;
+
+      const enemy = SpeedNail.spawnFromCorner(word, canvas, targetX, targetY, min, max, cornerIndex);
+      usedLetters.add(word[0]);
+
+      if (i === 0) {
+        this.enemies.push(enemy);
+      } else {
+        this.pendingSpawns.push({ enemy, delay: SPEED_BURST_DELAY * i });
+      }
+    }
+  }
+
+  private tickPendingSpawns(deltaTime: number): void {
+    const ready: Enemy[] = [];
+    this.pendingSpawns = this.pendingSpawns.filter(ps => {
+      ps.delay -= deltaTime;
+      if (ps.delay <= 0) {
+        ready.push(ps.enemy);
+        return false;
+      }
+      return true;
+    });
+    for (const enemy of ready) {
+      this.enemies.push(enemy);
+    }
   }
 
   // ── Enemy bookkeeping ────────────────────────────────────────────
@@ -201,13 +262,6 @@ export class EnemyManager {
     for (const enemy of this.enemies) {
       enemy.update(deltaTime, { x: targetX, y: targetY });
 
-      if (enemy instanceof SpawnerNail && enemy.pendingSpawns.length > 0) {
-        this.onSpawnerSpawn?.();
-        for (const child of enemy.pendingSpawns) {
-          this.addChildWithUniqueLetter(child, this.words, usedLetters);
-        }
-        enemy.pendingSpawns = [];
-      }
 
       if (enemy instanceof Sniper && enemy.pendingSpawns.length > 0) {
         this.onSniperShoot?.();
@@ -245,7 +299,7 @@ export class EnemyManager {
   }
 
   /**
-   * Attempt to add a child enemy (from SpawnerNail / Sniper) ensuring its
+   * Attempt to add a child enemy (from Sniper) ensuring its
    * first letter is unique. If the child's current word conflicts, try to
    * reassign it from the given word pool. If no free letter exists, discard.
    */

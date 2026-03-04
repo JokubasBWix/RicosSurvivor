@@ -1,7 +1,7 @@
 import { Enemy, EnemyType, Position } from '../types';
 import { Nail } from '../entities/Nail';
 import { ZigzagNail } from '../entities/ZigzagNail';
-import { SpawnerNail } from '../entities/SpawnerNail';
+import { StalkerNail } from '../entities/StalkerNail';
 import { TankNail } from '../entities/TankNail';
 import { SpeedNail } from '../entities/SpeedNail';
 import { Sniper } from '../entities/Sniper';
@@ -9,13 +9,18 @@ import { Sniper } from '../entities/Sniper';
 const DEFAULT_SPEEDS: Record<EnemyType, { min: number; max: number }> = {
   nail:    { min: 45, max: 80 },
   zigzag:  { min: 15, max: 25 },
-  spawner: { min: 40, max: 60 },
+  stalker: { min: 20, max: 40 },
   tank:    { min: 20, max: 35 },
-  speed:   { min: 80, max: 120 },
+  speed:   { min: 100, max: 140 },
   sniper:  { min: 30, max: 50 }
 };
 
 export class EnemyFactory {
+  static getSpeedRange(type: EnemyType, multiplier: number = 1.0): { min: number; max: number } {
+    const base = DEFAULT_SPEEDS[type];
+    return { min: base.min * multiplier, max: base.max * multiplier };
+  }
+
   static create(
     type: EnemyType,
     word: string,
@@ -33,8 +38,8 @@ export class EnemyFactory {
         return Nail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'zigzag':
         return ZigzagNail.spawn360(word, canvas, targetX, targetY, min, max);
-      case 'spawner':
-        return SpawnerNail.spawn360(word, canvas, targetX, targetY, min, max, words);
+      case 'stalker':
+        return StalkerNail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'tank':
         return TankNail.spawn360(word, canvas, targetX, targetY, min, max);
       case 'speed':
@@ -70,8 +75,8 @@ export class EnemyFactory {
         return new Nail(word, spawnPos, velocity);
       case 'zigzag':
         return new ZigzagNail(word, spawnPos, velocity);
-      case 'spawner':
-        return new SpawnerNail(word, spawnPos, velocity, targetPos, words);
+      case 'stalker':
+        return new StalkerNail(word, spawnPos, velocity);
       case 'tank':
         return new TankNail(word, spawnPos, velocity);
       case 'speed':

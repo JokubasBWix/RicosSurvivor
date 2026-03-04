@@ -32,7 +32,7 @@ export interface Enemy extends Entity {
   checkCollision(player: { position: Position; radius: number }): boolean;
 }
 
-export type EnemyType = 'nail' | 'zigzag' | 'spawner' | 'tank' | 'speed' | 'sniper';
+export type EnemyType = 'nail' | 'zigzag' | 'stalker' | 'tank' | 'speed' | 'sniper';
 
 export enum GameState {
   START_SCREEN,
