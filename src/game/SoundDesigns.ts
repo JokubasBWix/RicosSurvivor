@@ -231,13 +231,8 @@ export function playPlayerDeath(ctx: Ctx, dest: Dest): void {
   fail.stop(now + 0.8);
 }
 
-// ── 8. Game over (sample-based) ──────────────────────────────────────
+// ── Sample buffers (decoded once via preloadSamples) ─────────────────
 let gameOverBuffer: AudioBuffer | null = null;
-fetch(gameOverSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { gameOverBuffer = decoded; })
-  .catch(() => {});
 
 let activeGameOverSrc: AudioBufferSourceNode | null = null;
 let activeGameOverGain: GainNode | null = null;
@@ -269,11 +264,6 @@ export function stopGameOver(): void {
 
 // ── 9. Sniper shoots (sample-based) ─────────────────────────────────
 let sniperShootBuffer: AudioBuffer | null = null;
-fetch(sniperShootSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { sniperShootBuffer = decoded; })
-  .catch(() => {});
 
 export function playSniperShoot(ctx: Ctx, dest: Dest): void {
   if (!sniperShootBuffer) return;
@@ -288,18 +278,7 @@ export function playSniperShoot(ctx: Ctx, dest: Dest): void {
 // ── Looping sample helpers ───────────────────────────────────────────
 
 let chainsawBuffer: AudioBuffer | null = null;
-fetch(chainsawSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { chainsawBuffer = decoded; })
-  .catch(() => {});
-
 let drillBuffer: AudioBuffer | null = null;
-fetch(drillSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { drillBuffer = decoded; })
-  .catch(() => {});
 
 function startSampleLoop(buffer: AudioBuffer | null, ctx: Ctx, dest: Dest, volume: number): (() => void) | null {
   if (!buffer) return null;
@@ -323,11 +302,6 @@ export function startDrillLoop(ctx: Ctx, dest: Dest): (() => void) | null {
 
 // ── 10. Tank spin loop ──────────────────────────────────────────────
 let spinningAxeBuffer: AudioBuffer | null = null;
-fetch(spinningAxeSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { spinningAxeBuffer = decoded; })
-  .catch(() => {});
 
 export function startTankSpinLoop(ctx: Ctx, dest: Dest): (() => void) | null {
   return startSampleLoop(spinningAxeBuffer, ctx, dest, 1);
@@ -335,11 +309,23 @@ export function startTankSpinLoop(ctx: Ctx, dest: Dest): (() => void) | null {
 
 // ── 11. Circular saw loop (speed enemy) ─────────────────────────────
 let circularSawBuffer: AudioBuffer | null = null;
-fetch(circularSawSrc)
-  .then((r) => r.arrayBuffer())
-  .then((buf) => new AudioContext().decodeAudioData(buf))
-  .then((decoded) => { circularSawBuffer = decoded; })
-  .catch(() => {});
+
+// ── Preload all sample buffers using the game's AudioContext ─────────
+let _samplesLoaded = false;
+export function preloadSamples(ctx: Ctx): void {
+  if (_samplesLoaded) return;
+  _samplesLoaded = true;
+
+  const decode = (src: string) =>
+    fetch(src).then(r => r.arrayBuffer()).then(buf => ctx.decodeAudioData(buf));
+
+  decode(gameOverSrc).then(b => { gameOverBuffer = b; }).catch(() => {});
+  decode(sniperShootSrc).then(b => { sniperShootBuffer = b; }).catch(() => {});
+  decode(chainsawSrc).then(b => { chainsawBuffer = b; }).catch(() => {});
+  decode(drillSrc).then(b => { drillBuffer = b; }).catch(() => {});
+  decode(spinningAxeSrc).then(b => { spinningAxeBuffer = b; }).catch(() => {});
+  decode(circularSawSrc).then(b => { circularSawBuffer = b; }).catch(() => {});
+}
 
 export function startCircularSawLoop(ctx: Ctx, dest: Dest): (() => void) | null {
   return startSampleLoop(circularSawBuffer, ctx, dest, 0.7);

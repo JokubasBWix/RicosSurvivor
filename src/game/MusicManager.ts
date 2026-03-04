@@ -63,10 +63,6 @@ export class MusicManager {
     });
   }
 
-  playGameOver(): void {
-    // No-op until a game-over track is added
-  }
-
   stopAll(): void {
     if (this.retryAbort) {
       this.retryAbort.abort();

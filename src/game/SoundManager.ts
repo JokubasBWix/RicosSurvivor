@@ -1,4 +1,5 @@
 import * as SD from './SoundDesigns';
+import { preloadSamples } from './SoundDesigns';
 import { MusicManager } from './MusicManager';
 
 export class SoundManager {
@@ -20,6 +21,7 @@ export class SoundManager {
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = this._muted ? 0 : 1;
         this.masterGain.connect(this.ctx.destination);
+        preloadSamples(this.ctx);
       } catch {
         return null;
       }
@@ -102,10 +104,6 @@ export class SoundManager {
     this.music.playGameplay();
   }
 
-  playGameOverMusic(): void {
-    this.music.playGameOver();
-  }
-
   stopMusic(): void {
     this.music.stopAll();
   }
@@ -121,7 +119,6 @@ export class SoundManager {
       { name: 'enemyDestroyed', description: 'Enemy word completed', play: () => this.playEnemyDestroyed() },
       { name: 'bigExplosion', description: 'Sniper destroyed', play: () => this.playBigExplosion() },
       { name: 'playerDeath', description: 'Player killed', play: () => this.playPlayerDeath() },
-      { name: 'gameOver', description: 'Transition to game-over screen', play: () => this.playGameOver() },
       { name: 'sniperShoot', description: 'Sniper fires a bullet', play: () => this.playSniperShoot() },
       { name: 'tankSpinLoop', description: 'Tank spin loop', play: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = this.startTankSpinLoop() ?? undefined; }, stop: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = undefined; } },
       { name: 'spawnerSpawn', description: 'Spawner creates minion', play: () => this.playSpawnerSpawn() },
@@ -129,8 +126,9 @@ export class SoundManager {
       { name: 'drillLoop', description: 'Stalker drill loop', play: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = this.startDrillLoop() ?? undefined; }, stop: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = undefined; } },
       { name: 'circularSawLoop', description: 'Speed circular saw loop', play: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = this.startCircularSawLoop() ?? undefined; }, stop: () => { this._catalogueStopLoop?.(); this._catalogueStopLoop = undefined; } },
 
+      { name: 'startScreenMusic', description: 'Start screen theme (loop)', play: () => this.playStartScreenMusic(), stop: () => this.stopMusic() },
       { name: 'gameplayMusic', description: 'Background theme (loop)', play: () => this.playGameplayMusic(), stop: () => this.stopMusic() },
-      { name: 'gameOverMusic', description: 'Game-over music (no-op)', play: () => this.playGameOverMusic(), stop: () => this.stopMusic() },
+      { name: 'gameOver', description: 'Transition to game-over screen', play: () => this.playGameOver(), stop: () => this.stopGameOver() },
     ];
   }
 }

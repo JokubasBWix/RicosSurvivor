@@ -230,26 +230,27 @@ export class EnemyManager {
     const { min, max } = EnemyFactory.getSpeedRange('speed', speedMult);
     const cornerIndex = Math.floor(Math.random() * 4);
 
-    let firstEnemy: Enemy | null = null;
+    let lastEnemy: Enemy | null = null;
     for (let i = 0; i < SPEED_BURST_COUNT; i++) {
       const word = this.getWordForType('speed', usedLetters);
       if (!word) break;
 
       const enemy = SpeedNail.spawnFromCorner(word, canvas, targetX, targetY, min, max, cornerIndex);
       usedLetters.add(word[0]);
+      lastEnemy = enemy;
 
       if (i === 0) {
-        firstEnemy = enemy;
         this.enemies.push(enemy);
       } else {
         this.pendingSpawns.push({ enemy, delay: SPEED_BURST_DELAY * i });
       }
     }
 
-    // Start one shared loop for the entire burst, keyed to the first enemy
-    if (firstEnemy) {
+    // Start one shared loop for the entire burst, keyed to the last enemy
+    // (it will be destroyed last since they're staggered)
+    if (lastEnemy) {
       const stop = this.onSpeedSpawn?.();
-      if (stop) this.loopStops.set(firstEnemy, stop);
+      if (stop) this.loopStops.set(lastEnemy, stop);
     }
   }
 
@@ -290,9 +291,6 @@ export class EnemyManager {
         enemy.pendingSpawns = [];
       }
 
-      if (enemy instanceof TankNail && enemy.pendingEvents.length > 0) {
-        enemy.pendingEvents = [];
-      }
     }
 
     // Stop loop sounds for enemies about to be removed

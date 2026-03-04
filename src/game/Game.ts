@@ -489,7 +489,6 @@ export class Game {
       if (this.deathTimer <= 0) {
         this.gameState = GameState.GAME_OVER;
         this.sound.playGameOver();
-        this.sound.playGameOverMusic();
         this.showGameOverOverlay();
       }
       return;
@@ -864,15 +863,6 @@ export class Game {
     this.renderLeaderboardList(this.startLeaderboardList, this.startLeaderboardEmpty);
     this.startOverlay.classList.remove('hidden');
     this.sound.playStartScreenMusic();
-
-    // If autoplay was blocked, retry on the first interaction with the start screen
-    const retryMusic = () => {
-      this.startOverlay.removeEventListener('pointerdown', retryMusic);
-      this.startOverlay.removeEventListener('keydown', retryMusic);
-      this.sound.playStartScreenMusic();
-    };
-    this.startOverlay.addEventListener('pointerdown', retryMusic, { once: false });
-    this.startOverlay.addEventListener('keydown', retryMusic, { once: false });
 
     // Force reflow so the browser applies the non-transitioned state,
     // then restore transitions for future start-game animation
