@@ -11,11 +11,16 @@ const DEFAULT_SPEEDS: Record<EnemyType, { min: number; max: number }> = {
   zigzag:  { min: 15, max: 25 },
   stalker: { min: 20, max: 40 },
   tank:    { min: 20, max: 35 },
-  speed:   { min: 80, max: 120 },
+  speed:   { min: 100, max: 140 },
   sniper:  { min: 30, max: 50 }
 };
 
 export class EnemyFactory {
+  static getSpeedRange(type: EnemyType, multiplier: number = 1.0): { min: number; max: number } {
+    const base = DEFAULT_SPEEDS[type];
+    return { min: base.min * multiplier, max: base.max * multiplier };
+  }
+
   static create(
     type: EnemyType,
     word: string,
