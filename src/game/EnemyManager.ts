@@ -2,6 +2,8 @@ import { Enemy, EnemyType, Position } from '../types';
 import { EnemyFactory } from './EnemyFactory';
 import { SpeedNail } from '../entities/SpeedNail';
 import { TankNail } from '../entities/TankNail';
+import { ZigzagNail } from '../entities/ZigzagNail';
+import { StalkerNail } from '../entities/StalkerNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
 import { FONT_DEFAULT } from './FontLoader';
@@ -55,8 +57,13 @@ export class EnemyManager {
   // Sound callbacks (wired by Game.ts)
   public onSniperShoot?: () => void;
   public onSpawnerSpawn?: () => void;
-  public onTankDash?: () => void;
-  public onTankSpin?: () => void;
+  public onTankSpin?: () => (() => void) | null;
+  public onZigzagSpawn?: () => (() => void) | null;
+  public onStalkerSpawn?: () => (() => void) | null;
+  public onSpeedSpawn?: () => (() => void) | null;
+
+  // Loop sound stop handles keyed by enemy instance
+  private loopStops = new Map<Enemy, () => void>();
 
   // Survival state
   private elapsedTime: number = 0;
@@ -111,6 +118,7 @@ export class EnemyManager {
   // ── Init / Reset ─────────────────────────────────────────────────
 
   reset(): void {
+    this.stopAllLoops();
     this.enemies = [];
     this.pendingSpawns = [];
     this.elapsedTime = 0;
@@ -120,6 +128,7 @@ export class EnemyManager {
   }
 
   clearEnemies(): void {
+    this.stopAllLoops();
     this.enemies = [];
   }
 
@@ -132,6 +141,7 @@ export class EnemyManager {
     const wordsForType = type === 'sniper' ? SNIPER_WORDS : this.words;
     const enemy = EnemyFactory.createAtPosition(type, word, spawnPos, targetPos, wordsForType, this.speedMultiplier);
     this.enemies.push(enemy);
+    this.startLoopSound(enemy);
   }
 
   // ── Spawn interval (ramps down over time) ────────────────────────
@@ -218,6 +228,7 @@ export class EnemyManager {
         type, word, canvas, targetX, targetY, wordsForType, speedMult, this.rng
       );
       this.enemies.push(enemy);
+      this.startLoopSound(enemy);
       usedLetters.add(word[0]);
     }
 
@@ -237,6 +248,7 @@ export class EnemyManager {
     const { min, max } = EnemyFactory.getSpeedRange('speed', speedMult);
     const cornerIndex = this.rng.nextInt(0, 4);
 
+    let lastEnemy: Enemy | null = null;
     for (let i = 0; i < SPEED_BURST_COUNT; i++) {
       const word = this.getWordForType('speed', usedLetters);
       if (!word) break;
@@ -245,12 +257,20 @@ export class EnemyManager {
         word, canvas, targetX, targetY, min, max, cornerIndex, this.rng
       );
       usedLetters.add(word[0]);
+      lastEnemy = enemy;
 
       if (i === 0) {
         this.enemies.push(enemy);
       } else {
         this.pendingSpawns.push({ enemy, delay: SPEED_BURST_DELAY * i });
       }
+    }
+
+    // Start one shared loop for the entire burst, keyed to the last enemy
+    // (it will be destroyed last since they're staggered)
+    if (lastEnemy) {
+      const stop = this.onSpeedSpawn?.();
+      if (stop) this.loopStops.set(lastEnemy, stop);
     }
   }
 
@@ -290,12 +310,13 @@ export class EnemyManager {
         enemy.pendingSpawns = [];
       }
 
-      if (enemy instanceof TankNail && enemy.pendingEvents.length > 0) {
-        for (const ev of enemy.pendingEvents) {
-          if (ev === 'spin') this.onTankSpin?.();
-          else if (ev === 'dash') this.onTankDash?.();
-        }
-        enemy.pendingEvents = [];
+    }
+
+    // Stop loop sounds for enemies about to be removed
+    for (const enemy of this.enemies) {
+      if (enemy.isDestroyed || enemy.isOffScreen(canvas)) {
+        const stop = this.loopStops.get(enemy);
+        if (stop) { stop(); this.loopStops.delete(enemy); }
       }
     }
 
@@ -361,6 +382,25 @@ export class EnemyManager {
     if (available.length === 0) return null;
 
     return available[this.rng.nextInt(0, available.length)];
+  }
+
+  // ── Loop sound helpers ─────────────────────────────────────────────
+
+  private startLoopSound(enemy: Enemy): void {
+    let stop: (() => void) | null | undefined;
+    if (enemy instanceof ZigzagNail) {
+      stop = this.onZigzagSpawn?.();
+    } else if (enemy instanceof StalkerNail) {
+      stop = this.onStalkerSpawn?.();
+    } else if (enemy instanceof TankNail) {
+      stop = this.onTankSpin?.();
+    }
+    if (stop) this.loopStops.set(enemy, stop);
+  }
+
+  public stopAllLoops(): void {
+    for (const stop of this.loopStops.values()) stop();
+    this.loopStops.clear();
   }
 
   // ── Collisions ───────────────────────────────────────────────────

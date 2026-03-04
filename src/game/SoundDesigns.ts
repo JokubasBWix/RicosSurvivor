@@ -2,6 +2,13 @@
 // Each function receives an AudioContext and a destination (GainNode for master volume)
 // and creates fire-and-forget nodes that GC automatically.
 
+import sniperShootSrc from '../assets/audio/sniperShoot.mp3';
+import chainsawSrc from '../assets/audio/chainsaw.mp3';
+import drillSrc from '../assets/audio/drill.mp3';
+import spinningAxeSrc from '../assets/audio/spinningAxe.mp3';
+import circularSawSrc from '../assets/audio/circularSaw.mp3';
+import gameOverSrc from '../assets/audio/gameOver.mp3';
+
 type Ctx = AudioContext;
 type Dest = AudioNode;
 
@@ -118,7 +125,7 @@ export function playEnemyDestroyed(ctx: Ctx, dest: Dest): void {
   bp.frequency.setValueAtTime(800, now);
   bp.Q.setValueAtTime(1, now);
   const nGain = ctx.createGain();
-  nGain.gain.setValueAtTime(0.15, now);
+  nGain.gain.setValueAtTime(0.3, now);
   nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
   noise.connect(bp).connect(nGain).connect(dest);
   noise.start(now);
@@ -130,7 +137,7 @@ export function playEnemyDestroyed(ctx: Ctx, dest: Dest): void {
   osc.type = 'sawtooth';
   osc.frequency.setValueAtTime(400, now);
   osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-  oGain.gain.setValueAtTime(0.08, now);
+  oGain.gain.setValueAtTime(0.16, now);
   oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
   osc.connect(oGain).connect(dest);
   osc.start(now);
@@ -149,7 +156,7 @@ export function playBigExplosion(ctx: Ctx, dest: Dest): void {
   lp.frequency.setValueAtTime(600, now);
   lp.frequency.exponentialRampToValueAtTime(100, now + 0.4);
   const nGain = ctx.createGain();
-  nGain.gain.setValueAtTime(0.2, now);
+  nGain.gain.setValueAtTime(0.4, now);
   nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
   noise.connect(lp).connect(nGain).connect(dest);
   noise.start(now);
@@ -161,7 +168,7 @@ export function playBigExplosion(ctx: Ctx, dest: Dest): void {
   sub.type = 'sine';
   sub.frequency.setValueAtTime(60, now);
   sub.frequency.exponentialRampToValueAtTime(30, now + 0.4);
-  subGain.gain.setValueAtTime(0.25, now);
+  subGain.gain.setValueAtTime(0.5, now);
   subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
   sub.connect(subGain).connect(dest);
   sub.start(now);
@@ -173,7 +180,7 @@ export function playBigExplosion(ctx: Ctx, dest: Dest): void {
   saw.type = 'sawtooth';
   saw.frequency.setValueAtTime(200, now);
   saw.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-  sawGain.gain.setValueAtTime(0.1, now);
+  sawGain.gain.setValueAtTime(0.2, now);
   sawGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
   saw.connect(sawGain).connect(dest);
   saw.start(now);
@@ -224,105 +231,104 @@ export function playPlayerDeath(ctx: Ctx, dest: Dest): void {
   fail.stop(now + 0.8);
 }
 
-// ── 8. Game over ────────────────────────────────────────────────────
+// ── Sample buffers (decoded once via preloadSamples) ─────────────────
+let gameOverBuffer: AudioBuffer | null = null;
+
+let activeGameOverSrc: AudioBufferSourceNode | null = null;
+let activeGameOverGain: GainNode | null = null;
+
 export function playGameOver(ctx: Ctx, dest: Dest): void {
-  const now = ctx.currentTime;
-
-  // Somber descending minor chord — two detuned sines
-  const freqs = [440, 523.25]; // A4, C5 (minor third)
-  for (const freq of freqs) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, now);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 1.5);
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.setValueAtTime(0.12, now + 0.8);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-    osc.connect(gain).connect(dest);
-    osc.start(now);
-    osc.stop(now + 1.5);
-  }
-}
-
-// ── 9. Sniper shoots ────────────────────────────────────────────────
-export function playSniperShoot(ctx: Ctx, dest: Dest): void {
-  const now = ctx.currentTime;
-
-  // Bandpass noise "crack"
-  const noise = ctx.createBufferSource();
-  noise.buffer = getNoiseBuffer(ctx);
-  const bp = ctx.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.setValueAtTime(3000, now);
-  bp.Q.setValueAtTime(5, now);
-  const nGain = ctx.createGain();
-  nGain.gain.setValueAtTime(0.12, now);
-  nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-  noise.connect(bp).connect(nGain).connect(dest);
-  noise.start(now);
-  noise.stop(now + 0.04);
-
-  // Square pulse
-  const osc = ctx.createOscillator();
-  const oGain = ctx.createGain();
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(1000, now);
-  oGain.gain.setValueAtTime(0.06, now);
-  oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-  osc.connect(oGain).connect(dest);
-  osc.start(now);
-  osc.stop(now + 0.04);
-}
-
-// ── 10. Tank spin start ─────────────────────────────────────────────
-export function playTankSpin(ctx: Ctx, dest: Dest): void {
-  const now = ctx.currentTime;
-  const dur = 2.5;
-
-  const osc = ctx.createOscillator();
+  if (!gameOverBuffer) return;
+  const src = ctx.createBufferSource();
+  src.buffer = gameOverBuffer;
   const gain = ctx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(80, now);
-  osc.frequency.exponentialRampToValueAtTime(600, now + dur);
-  gain.gain.setValueAtTime(0.04, now);
-  gain.gain.linearRampToValueAtTime(0.1, now + dur * 0.8);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-  osc.connect(gain).connect(dest);
-  osc.start(now);
-  osc.stop(now + dur);
+  gain.gain.value = 0.5;
+  src.connect(gain).connect(dest);
+  activeGameOverSrc = src;
+  activeGameOverGain = gain;
+  src.start();
 }
 
-// ── 11. Tank dash ───────────────────────────────────────────────────
-export function playTankDash(ctx: Ctx, dest: Dest): void {
-  const now = ctx.currentTime;
+export function stopGameOver(): void {
+  if (!activeGameOverGain) return;
+  const g = activeGameOverGain;
+  const s = activeGameOverSrc;
+  g.gain.setValueAtTime(g.gain.value, g.context.currentTime);
+  g.gain.linearRampToValueAtTime(0, g.context.currentTime + 0.5);
+  activeGameOverSrc = null;
+  activeGameOverGain = null;
+  setTimeout(() => {
+    try { s?.stop(); s?.disconnect(); } catch {}
+  }, 550);
+}
 
-  // Bandpass noise "whoosh"
-  const noise = ctx.createBufferSource();
-  noise.buffer = getNoiseBuffer(ctx);
-  const bp = ctx.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.setValueAtTime(1000, now);
-  bp.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-  bp.Q.setValueAtTime(1, now);
-  const nGain = ctx.createGain();
-  nGain.gain.setValueAtTime(0.15, now);
-  nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-  noise.connect(bp).connect(nGain).connect(dest);
-  noise.start(now);
-  noise.stop(now + 0.3);
+// ── 9. Sniper shoots (sample-based) ─────────────────────────────────
+let sniperShootBuffer: AudioBuffer | null = null;
 
-  // Descending sine
-  const osc = ctx.createOscillator();
-  const oGain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(300, now);
-  osc.frequency.exponentialRampToValueAtTime(60, now + 0.3);
-  oGain.gain.setValueAtTime(0.1, now);
-  oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-  osc.connect(oGain).connect(dest);
-  osc.start(now);
-  osc.stop(now + 0.3);
+export function playSniperShoot(ctx: Ctx, dest: Dest): void {
+  if (!sniperShootBuffer) return;
+  const src = ctx.createBufferSource();
+  src.buffer = sniperShootBuffer;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.3;
+  src.connect(gain).connect(dest);
+  src.start();
+}
+
+// ── Looping sample helpers ───────────────────────────────────────────
+
+let chainsawBuffer: AudioBuffer | null = null;
+let drillBuffer: AudioBuffer | null = null;
+
+function startSampleLoop(buffer: AudioBuffer | null, ctx: Ctx, dest: Dest, volume: number): (() => void) | null {
+  if (!buffer) return null;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  src.connect(gain).connect(dest);
+  src.start();
+  return () => { try { src.stop(); src.disconnect(); } catch {} };
+}
+
+export function startChainsawLoop(ctx: Ctx, dest: Dest): (() => void) | null {
+  return startSampleLoop(chainsawBuffer, ctx, dest, 0.7);
+}
+
+export function startDrillLoop(ctx: Ctx, dest: Dest): (() => void) | null {
+  return startSampleLoop(drillBuffer, ctx, dest, 0.8);
+}
+
+// ── 10. Tank spin loop ──────────────────────────────────────────────
+let spinningAxeBuffer: AudioBuffer | null = null;
+
+export function startTankSpinLoop(ctx: Ctx, dest: Dest): (() => void) | null {
+  return startSampleLoop(spinningAxeBuffer, ctx, dest, 1);
+}
+
+// ── 11. Circular saw loop (speed enemy) ─────────────────────────────
+let circularSawBuffer: AudioBuffer | null = null;
+
+// ── Preload all sample buffers using the game's AudioContext ─────────
+let _samplesLoaded = false;
+export function preloadSamples(ctx: Ctx): void {
+  if (_samplesLoaded) return;
+  _samplesLoaded = true;
+
+  const decode = (src: string) =>
+    fetch(src).then(r => r.arrayBuffer()).then(buf => ctx.decodeAudioData(buf));
+
+  decode(gameOverSrc).then(b => { gameOverBuffer = b; }).catch(() => {});
+  decode(sniperShootSrc).then(b => { sniperShootBuffer = b; }).catch(() => {});
+  decode(chainsawSrc).then(b => { chainsawBuffer = b; }).catch(() => {});
+  decode(drillSrc).then(b => { drillBuffer = b; }).catch(() => {});
+  decode(spinningAxeSrc).then(b => { spinningAxeBuffer = b; }).catch(() => {});
+  decode(circularSawSrc).then(b => { circularSawBuffer = b; }).catch(() => {});
+}
+
+export function startCircularSawLoop(ctx: Ctx, dest: Dest): (() => void) | null {
+  return startSampleLoop(circularSawBuffer, ctx, dest, 0.7);
 }
 
 // ── 12. Spawner spawns child ────────────────────────────────────────

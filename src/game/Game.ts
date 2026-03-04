@@ -107,8 +107,10 @@ export class Game {
     this.enemyManager = new EnemyManager(words, Date.now());
     this.enemyManager.onSniperShoot = () => this.sound.playSniperShoot();
     this.enemyManager.onSpawnerSpawn = () => this.sound.playSpawnerSpawn();
-    this.enemyManager.onTankDash = () => this.sound.playTankDash();
-    this.enemyManager.onTankSpin = () => this.sound.playTankSpin();
+    this.enemyManager.onTankSpin = () => this.sound.startTankSpinLoop();
+    this.enemyManager.onZigzagSpawn = () => this.sound.startChainsawLoop();
+    this.enemyManager.onStalkerSpawn = () => this.sound.startDrillLoop();
+    this.enemyManager.onSpeedSpawn = () => this.sound.startCircularSawLoop();
     this.sunburst = new SunburstBackground();
     this.targetLock = new TargetLockRenderer();
     this.inputManager = new InputManager(
@@ -158,6 +160,12 @@ export class Game {
     this.setupCanvas();
     this.setupEventListeners();
     this.setupStartScreenListeners();
+
+    // Auto-enable debug tools when ?debug is in the URL
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      this.soundPanel.style.display = 'block';
+      this.enemyManager.debugMode = true;
+    }
   }
 
   private setupCanvas(): void {
@@ -481,7 +489,6 @@ export class Game {
       if (this.deathTimer <= 0) {
         this.gameState = GameState.GAME_OVER;
         this.sound.playGameOver();
-        this.sound.playGameOverMusic();
         this.showGameOverOverlay();
       }
       return;
@@ -517,6 +524,7 @@ export class Game {
 
       // Stop music and play death sound
       this.sound.stopMusic();
+      this.enemyManager.stopAllLoops();
       this.sound.playPlayerDeath();
 
       // Heavy screen shake on death
@@ -854,6 +862,7 @@ export class Game {
 
     this.renderLeaderboardList(this.startLeaderboardList, this.startLeaderboardEmpty);
     this.startOverlay.classList.remove('hidden');
+    this.sound.playStartScreenMusic();
 
     // Force reflow so the browser applies the non-transitioned state,
     // then restore transitions for future start-game animation
@@ -957,6 +966,7 @@ export class Game {
   }
 
   private goToStartScreen(): void {
+    this.sound.stopGameOver();
     this.hideGameOverOverlay();
     this.gameState = GameState.START_SCREEN;
 
