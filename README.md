@@ -89,4 +89,3 @@ git push -u origin main
 - Lives system
 - Difficulty progression
 - Sound effects
-- Particle effects
