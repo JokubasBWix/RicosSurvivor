@@ -214,8 +214,8 @@ export class Game {
         return;
       }
 
-      // Toggle debug mode with backtick
-      if (e.key === '`') {
+      // Toggle debug mode with Cmd+Option+Shift+`
+      if (e.key === '`' && e.metaKey && e.altKey && e.shiftKey) {
         this.enemyManager.debugMode = !this.enemyManager.debugMode;
         if (this.enemyManager.debugMode) {
           this.gameState = GameState.PLAYING;
@@ -813,7 +813,7 @@ export class Game {
     y += 16;
     ctx.fillText('R = remove leaderboard entry', panelX + 12, y);
     y += 16;
-    ctx.fillText('` to exit debug mode', panelX + 12, y);
+    ctx.fillText('⌘⌥⇧` to exit debug mode', panelX + 12, y);
 
     // Debug message toast
     if (this.debugMessageTimer > 0 && this.debugMessage) {
