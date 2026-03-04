@@ -107,8 +107,10 @@ export class Game {
     this.enemyManager = new EnemyManager(words);
     this.enemyManager.onSniperShoot = () => this.sound.playSniperShoot();
     this.enemyManager.onSpawnerSpawn = () => this.sound.playSpawnerSpawn();
-    this.enemyManager.onTankDash = () => this.sound.playTankDash();
-    this.enemyManager.onTankSpin = () => this.sound.playTankSpin();
+    this.enemyManager.onTankSpin = () => this.sound.startTankSpinLoop();
+    this.enemyManager.onZigzagSpawn = () => this.sound.startChainsawLoop();
+    this.enemyManager.onStalkerSpawn = () => this.sound.startDrillLoop();
+    this.enemyManager.onSpeedSpawn = () => this.sound.startCircularSawLoop();
     this.sunburst = new SunburstBackground();
     this.targetLock = new TargetLockRenderer();
     this.inputManager = new InputManager(
@@ -158,6 +160,12 @@ export class Game {
     this.setupCanvas();
     this.setupEventListeners();
     this.setupStartScreenListeners();
+
+    // Auto-enable debug tools when ?debug is in the URL
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      this.soundPanel.style.display = 'block';
+      this.enemyManager.debugMode = true;
+    }
   }
 
   private setupCanvas(): void {
@@ -517,6 +525,7 @@ export class Game {
 
       // Stop music and play death sound
       this.sound.stopMusic();
+      this.enemyManager.stopAllLoops();
       this.sound.playPlayerDeath();
 
       // Heavy screen shake on death
@@ -854,6 +863,16 @@ export class Game {
 
     this.renderLeaderboardList(this.startLeaderboardList, this.startLeaderboardEmpty);
     this.startOverlay.classList.remove('hidden');
+    this.sound.playStartScreenMusic();
+
+    // If autoplay was blocked, retry on the first interaction with the start screen
+    const retryMusic = () => {
+      this.startOverlay.removeEventListener('pointerdown', retryMusic);
+      this.startOverlay.removeEventListener('keydown', retryMusic);
+      this.sound.playStartScreenMusic();
+    };
+    this.startOverlay.addEventListener('pointerdown', retryMusic, { once: false });
+    this.startOverlay.addEventListener('keydown', retryMusic, { once: false });
 
     // Force reflow so the browser applies the non-transitioned state,
     // then restore transitions for future start-game animation
@@ -957,6 +976,7 @@ export class Game {
   }
 
   private goToStartScreen(): void {
+    this.sound.stopGameOver();
     this.hideGameOverOverlay();
     this.gameState = GameState.START_SCREEN;
 
