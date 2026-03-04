@@ -16,12 +16,12 @@ interface SurvivalSpawnConfig {
 }
 
 const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
-  { type: 'nail',    unlockTime: 1,   baseInterval: 2500, minInterval: 1500 },
-  { type: 'zigzag',  unlockTime: 10,  baseInterval: 4000, minInterval: 2000 },
-  { type: 'speed',   unlockTime: 15,  baseInterval: 3500, minInterval: 3500 },
-  { type: 'tank',    unlockTime: 20,  baseInterval: 5000, minInterval: 4500 },
-  { type: 'stalker', unlockTime: 25,  baseInterval: 8000, minInterval: 3000 },
-  { type: 'sniper',  unlockTime: 35, baseInterval: 8000, minInterval: 5000 },
+  { type: 'nail',    unlockTime: 1,   baseInterval: 4500, minInterval: 4000 },
+  { type: 'zigzag',  unlockTime: 10,  baseInterval: 5000, minInterval: 4000 },
+  { type: 'speed',   unlockTime: 15,  baseInterval: 6500, minInterval: 4000 },
+  { type: 'tank',    unlockTime: 20,  baseInterval: 8000, minInterval: 4000 },
+  { type: 'stalker', unlockTime: 25,  baseInterval: 9000, minInterval: 4000 },
+  { type: 'sniper',  unlockTime: 35, baseInterval: 6000, minInterval: 4000 },
 ];
 
 const GRACE_PERIOD = 1;            // seconds before first enemy spawns
