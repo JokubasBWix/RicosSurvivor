@@ -22,6 +22,7 @@ export abstract class BaseEnemy implements Enemy {
   public isMinion: boolean = false;
   protected fontFamily: string = FONT_DEFAULT;
   protected fontSize: number = 16;
+  protected displayUppercase: boolean = false;
 
   constructor(word: string, position: Position, velocity: Velocity, radius: number = 20) {
     this.word = word;
@@ -62,8 +63,9 @@ export abstract class BaseEnemy implements Enemy {
     if (this.wordCompleted) return;
 
     const isLocked = this.typed.length > 0;
-    const typedPart = this.word.substring(0, this.typed.length);
-    const remaining = this.word.substring(this.typed.length);
+    const xform = this.displayUppercase ? (s: string) => s.toUpperCase() : (s: string) => s;
+    const typedPart = xform(this.word.substring(0, this.typed.length));
+    const remaining = xform(this.word.substring(this.typed.length));
 
     ctx.save();
 
@@ -72,7 +74,7 @@ export abstract class BaseEnemy implements Enemy {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const fullMetrics = ctx.measureText(this.word);
+    const fullMetrics = ctx.measureText(xform(this.word));
     const remainingMetrics = ctx.measureText(remaining);
     const typedMetrics = ctx.measureText(typedPart);
     const padX = 6;

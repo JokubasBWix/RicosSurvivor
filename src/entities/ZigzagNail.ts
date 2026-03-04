@@ -125,6 +125,30 @@ export class ZigzagNail extends BaseEnemy {
     this.renderWord(ctx);
   }
 
+  static spawnFromSide(
+    word: string,
+    canvas: HTMLCanvasElement,
+    targetX: number,
+    targetY: number,
+    speedMin: number = 35,
+    speedMax: number = 55
+  ): ZigzagNail {
+    const margin = 60;
+    const left = Math.random() < 0.5;
+    const x = left ? -margin : canvas.width + margin;
+    const y = Math.random() * canvas.height;
+
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const velocity: Velocity = dist > 0
+      ? { x: (dx / dist) * speed, y: (dy / dist) * speed }
+      : { x: speed, y: 0 };
+
+    return new ZigzagNail(word, { x, y }, velocity);
+  }
+
   static spawn360(
     word: string,
     canvas: HTMLCanvasElement,
@@ -133,7 +157,6 @@ export class ZigzagNail extends BaseEnemy {
     speedMin: number = 35,
     speedMax: number = 55
   ): ZigzagNail {
-    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax);
-    return new ZigzagNail(word, position, velocity);
+    return ZigzagNail.spawnFromSide(word, canvas, targetX, targetY, speedMin, speedMax);
   }
 }

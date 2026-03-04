@@ -27,7 +27,8 @@ export class TankNail extends BaseEnemy {
   constructor(word: string, position: Position, velocity: Velocity) {
     super(word, position, velocity, 55);
     this.fontFamily = FONT_TANK;
-    this.fontSize = 32;
+    this.fontSize = 22;
+    this.displayUppercase = true;
     this.velocity = { x: 0, y: 0 };
 
     if (!TankNail.image) {
@@ -111,6 +112,30 @@ export class TankNail extends BaseEnemy {
     this.renderWord(ctx);
   }
 
+  static spawnFromSide(
+    word: string,
+    canvas: HTMLCanvasElement,
+    targetX: number,
+    targetY: number,
+    speedMin: number = 20,
+    speedMax: number = 35
+  ): TankNail {
+    const margin = 60;
+    const left = Math.random() < 0.5;
+    const x = left ? -margin : canvas.width + margin;
+    const y = Math.random() * canvas.height;
+
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const velocity: Velocity = dist > 0
+      ? { x: (dx / dist) * speed, y: (dy / dist) * speed }
+      : { x: speed, y: 0 };
+
+    return new TankNail(word, { x, y }, velocity);
+  }
+
   static spawn360(
     word: string,
     canvas: HTMLCanvasElement,
@@ -119,7 +144,6 @@ export class TankNail extends BaseEnemy {
     speedMin: number = 20,
     speedMax: number = 35
   ): TankNail {
-    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax);
-    return new TankNail(word, position, velocity);
+    return TankNail.spawnFromSide(word, canvas, targetX, targetY, speedMin, speedMax);
   }
 }
