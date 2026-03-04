@@ -26,14 +26,14 @@ const SPAWN_TYPES: SpawnTypeConfig[] = [
   { type: 'sniper',  unlockTime: 35,  startWeight: 3,  maxWeight: 14,  weightRampDuration: 90 },
 ];
 
-const GRACE_PERIOD = 1;
-const BASE_SPAWN_INTERVAL = 2200;        // ms between spawns at start
+const GRACE_PERIOD = 2;
+const BASE_SPAWN_INTERVAL = 2000;        // ms between spawns at start
 const MIN_SPAWN_INTERVAL = 1200;         // ms between spawns at max difficulty
 const DIFFICULTY_RAMP_DURATION = 180;    // seconds over which interval shrinks
 const SPEED_RAMP_DURATION = 180;         // seconds to reach ~2× speed
 
-const MIN_ACTIVE_ENEMIES_START = 2;
-const MIN_ACTIVE_ENEMIES_END = 5;
+const MIN_ACTIVE_ENEMIES_START = 3;
+const MIN_ACTIVE_ENEMIES_END = 7;
 
 const SPEED_BURST_COUNT = 3;
 const SPEED_BURST_DELAY = 0.6;
