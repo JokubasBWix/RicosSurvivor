@@ -18,7 +18,7 @@ interface SurvivalSpawnConfig {
 const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
   { type: 'nail',    unlockTime: 1,   baseInterval: 7500, minInterval: 6000 },
   { type: 'zigzag',  unlockTime: 10,  baseInterval: 7000, minInterval: 6000 },
-  { type: 'speed',   unlockTime: 15,  baseInterval: 8500, minInterval: 6000 },
+  { type: 'speed',   unlockTime: 15,  baseInterval: 15000, minInterval: 6000 },
   { type: 'tank',    unlockTime: 20,  baseInterval: 10000, minInterval: 6000 },
   { type: 'stalker', unlockTime: 25,  baseInterval: 11000, minInterval: 6000 },
   { type: 'sniper',  unlockTime: 35, baseInterval: 13000, minInterval: 6000 },
@@ -41,7 +41,7 @@ interface PendingSpawn {
 }
 
 const SPEED_BURST_COUNT = 3;
-const SPEED_BURST_DELAY = 0.15; // seconds between each in the burst
+const SPEED_BURST_DELAY = 0.6; // seconds between each in the burst
 
 // ── EnemyManager ─────────────────────────────────────────────────────
 
