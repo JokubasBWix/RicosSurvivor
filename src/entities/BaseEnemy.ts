@@ -1,5 +1,6 @@
 import { Enemy, Position, Velocity } from '../types';
 import { FONT_DEFAULT } from '../game/FontLoader';
+import { SeededRNG } from '../utils/SeededRNG';
 
 // Typing-feedback constants
 const UNLOCKED_TEXT_COLOR = '#2a2a2a';
@@ -159,9 +160,11 @@ export abstract class BaseEnemy implements Enemy {
     targetX: number,
     targetY: number,
     speedMin: number,
-    speedMax: number
+    speedMax: number,
+    rng?: SeededRNG
   ): { position: Position; velocity: Velocity } {
-    const angle = Math.random() * Math.PI * 2;
+    const rand = rng ? () => rng.next() : Math.random;
+    const angle = rand() * Math.PI * 2;
     const halfW = canvas.width / 2;
     const halfH = canvas.height / 2;
     const edgeDist = Math.min(
@@ -175,7 +178,7 @@ export abstract class BaseEnemy implements Enemy {
     const dx = targetX - startX;
     const dy = targetY - startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const speed = speedMin + rand() * (speedMax - speedMin);
 
     return {
       position: { x: startX, y: startY },

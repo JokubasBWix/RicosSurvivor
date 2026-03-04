@@ -1,5 +1,6 @@
 import { Enemy, Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { SeededRNG } from '../utils/SeededRNG';
 import { FONT_SNIPER } from '../game/FontLoader';
 import { SniperNail } from './SniperNail';
 import nailgunImg from '../assets/images/nailgun.png';
@@ -220,9 +221,10 @@ export class Sniper extends BaseEnemy {
     targetY: number,
     speedMin: number = 30,
     speedMax: number = 50,
-    words: string[] = []
+    words: string[] = [],
+    rng?: SeededRNG
   ): Sniper {
-    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax);
+    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax, rng);
     return new Sniper(word, position, velocity, { x: targetX, y: targetY }, words);
   }
 }

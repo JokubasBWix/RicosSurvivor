@@ -7,45 +7,47 @@ import { StalkerNail } from '../entities/StalkerNail';
 import { Sniper } from '../entities/Sniper';
 import { SNIPER_WORDS } from '../data/sniperWords';
 import { FONT_DEFAULT } from './FontLoader';
+import { SeededRNG } from '../utils/SeededRNG';
 
-// ── Survival-mode configuration ──────────────────────────────────────
+// ── Survival-mode spawn type configuration ──────────────────────────
 
-interface SurvivalSpawnConfig {
+interface SpawnTypeConfig {
   type: EnemyType;
-  unlockTime: number;    // seconds before this type starts spawning
-  baseInterval: number;  // starting spawn interval in ms
-  minInterval: number;   // fastest possible spawn interval in ms
+  unlockTime: number;        // seconds before this type enters the pool
+  startWeight: number;       // weight at unlock
+  maxWeight: number;         // weight after ramp completes
+  weightRampDuration: number; // seconds from unlock to reach maxWeight
 }
 
-const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
-  { type: 'nail',    unlockTime: 1,   baseInterval: 7500, minInterval: 6000 },
-  { type: 'zigzag',  unlockTime: 10,  baseInterval: 7000, minInterval: 6000 },
-  { type: 'speed',   unlockTime: 15,  baseInterval: 15000, minInterval: 6000 },
-  { type: 'tank',    unlockTime: 20,  baseInterval: 10000, minInterval: 6000 },
-  { type: 'stalker', unlockTime: 25,  baseInterval: 11000, minInterval: 6000 },
-  { type: 'sniper',  unlockTime: 35, baseInterval: 13000, minInterval: 6000 },
+const SPAWN_TYPES: SpawnTypeConfig[] = [
+  { type: 'nail',    unlockTime: 1,   startWeight: 40, maxWeight: 20,  weightRampDuration: 90 },
+  { type: 'zigzag',  unlockTime: 10,  startWeight: 18,  maxWeight: 25,  weightRampDuration: 90  },
+  { type: 'speed',   unlockTime: 15,  startWeight: 8,  maxWeight: 15,  weightRampDuration: 90  },
+  { type: 'tank',    unlockTime: 20,  startWeight: 5,  maxWeight: 20,  weightRampDuration: 90  },
+  { type: 'stalker', unlockTime: 25,  startWeight: 10,  maxWeight: 25,  weightRampDuration: 90  },
+  { type: 'sniper',  unlockTime: 35,  startWeight: 3,  maxWeight: 14,  weightRampDuration: 90 },
 ];
 
-const GRACE_PERIOD = 1;            // seconds before first enemy spawns
-const SPEED_RAMP_DURATION = 180;   // seconds to reach ~2x speed
-const DIFFICULTY_RAMP_DURATION = 180; // seconds over which intervals shrink to minimum
+const GRACE_PERIOD = 2;
+const BASE_SPAWN_INTERVAL = 2000;        // ms between spawns at start
+const MIN_SPAWN_INTERVAL = 1200;         // ms between spawns at max difficulty
+const DIFFICULTY_RAMP_DURATION = 180;    // seconds over which interval shrinks
+const SPEED_RAMP_DURATION = 180;         // seconds to reach ~2× speed
 
-// ── Spawn timer per enemy type ───────────────────────────────────────
+const MIN_ACTIVE_ENEMIES_START = 3;
+const MIN_ACTIVE_ENEMIES_END = 7;
 
-interface SpawnTimer {
-  config: SurvivalSpawnConfig;
-  timer: number; // ms accumulated since last spawn
-}
+const SPEED_BURST_COUNT = 3;
+const SPEED_BURST_DELAY = 0.6;
+
+// ── Pending spawn (for staggered bursts) ────────────────────────────
 
 interface PendingSpawn {
   enemy: Enemy;
-  delay: number; // seconds remaining before activation
+  delay: number;
 }
 
-const SPEED_BURST_COUNT = 3;
-const SPEED_BURST_DELAY = 0.6; // seconds between each in the burst
-
-// ── EnemyManager ─────────────────────────────────────────────────────
+// ── EnemyManager ────────────────────────────────────────────────────
 
 export class EnemyManager {
   private enemies: Enemy[] = [];
@@ -64,14 +66,19 @@ export class EnemyManager {
   private loopStops = new Map<Enemy, () => void>();
 
   // Survival state
-  private elapsedTime: number = 0;          // seconds since game start
-  private graceProgress: number = 0;        // 0 → 1 during grace period
-  private spawnTimers: SpawnTimer[] = [];
+  private elapsedTime: number = 0;
+  private graceProgress: number = 0;
+  private spawnTimer: number = 0;
   private pendingSpawns: PendingSpawn[] = [];
 
-  constructor(words: string[]) {
+  // Deterministic RNG
+  private rng: SeededRNG;
+  private seed: number;
+
+  constructor(words: string[], seed: number = 12345) {
     this.words = words;
-    this.initSpawnTimers();
+    this.seed = seed;
+    this.rng = new SeededRNG(seed);
   }
 
   // ── Getters ──────────────────────────────────────────────────────
@@ -87,20 +94,17 @@ export class EnemyManager {
     }
   }
 
-  /** Elapsed game time in seconds */
   get survivalTime(): number {
     return this.elapsedTime;
   }
 
-  /** A value that grows with difficulty, useful for visual effects (starts at 1) */
   get difficultyLevel(): number {
     return 1 + this.elapsedTime / 60;
   }
 
-  /** Current global speed multiplier applied to enemy speeds */
   get speedMultiplier(): number {
     const t = Math.min(this.elapsedTime / SPEED_RAMP_DURATION, 1);
-    return 1 + t; // ramps from 1.0 → 2.0
+    return 1 + t;
   }
 
   get isInGracePeriod(): boolean {
@@ -113,20 +117,14 @@ export class EnemyManager {
 
   // ── Init / Reset ─────────────────────────────────────────────────
 
-  private initSpawnTimers(): void {
-    this.spawnTimers = SURVIVAL_CONFIG.map(config => ({
-      config,
-      timer: config.baseInterval,
-    }));
-  }
-
   reset(): void {
     this.stopAllLoops();
     this.enemies = [];
     this.pendingSpawns = [];
     this.elapsedTime = 0;
     this.graceProgress = 0;
-    this.initSpawnTimers();
+    this.spawnTimer = 0;
+    this.rng = new SeededRNG(this.seed);
   }
 
   clearEnemies(): void {
@@ -139,11 +137,39 @@ export class EnemyManager {
   spawnAtPosition(type: EnemyType, spawnPos: Position, targetPos: Position): void {
     const usedLetters = this.getUsedFirstLetters();
     const word = this.getWordForType(type, usedLetters);
-    if (!word) return; // no unique first letter available – skip
+    if (!word) return;
     const wordsForType = type === 'sniper' ? SNIPER_WORDS : this.words;
     const enemy = EnemyFactory.createAtPosition(type, word, spawnPos, targetPos, wordsForType, this.speedMultiplier);
     this.enemies.push(enemy);
     this.startLoopSound(enemy);
+  }
+
+  // ── Spawn interval (ramps down over time) ────────────────────────
+
+  private getCurrentSpawnInterval(): number {
+    const rampT = Math.min(this.elapsedTime / DIFFICULTY_RAMP_DURATION, 1);
+    return BASE_SPAWN_INTERVAL + (MIN_SPAWN_INTERVAL - BASE_SPAWN_INTERVAL) * rampT;
+  }
+
+  // ── Weighted type selection ──────────────────────────────────────
+
+  private getWeight(st: SpawnTypeConfig): number {
+    const timeSinceUnlock = this.elapsedTime - st.unlockTime;
+    if (timeSinceUnlock <= 0) return 0;
+    const t = Math.min(timeSinceUnlock / st.weightRampDuration, 1);
+    return st.startWeight + (st.maxWeight - st.startWeight) * t;
+  }
+
+  private pickEnemyType(): EnemyType {
+    const available = SPAWN_TYPES.filter(st => this.elapsedTime >= st.unlockTime);
+    const weights = available.map(st => this.getWeight(st));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let roll = this.rng.next() * totalWeight;
+    for (let i = 0; i < available.length; i++) {
+      roll -= weights[i];
+      if (roll <= 0) return available[i].type;
+    }
+    return available[available.length - 1].type;
   }
 
   // ── Main update loop ─────────────────────────────────────────────
@@ -154,7 +180,6 @@ export class EnemyManager {
     targetX: number,
     targetY: number
   ): void {
-    // In debug mode, only update existing enemies (no spawning)
     if (this._debugMode) {
       this.updateEnemies(deltaTime, canvas, targetX, targetY);
       return;
@@ -162,56 +187,49 @@ export class EnemyManager {
 
     this.elapsedTime += deltaTime;
 
-    // Grace period – don't spawn yet
     if (this.isInGracePeriod) {
       this.graceProgress = Math.min(1, this.elapsedTime / GRACE_PERIOD);
       this.updateEnemies(deltaTime, canvas, targetX, targetY);
       return;
     }
 
-    // Continuous spawning
     const speedMult = this.speedMultiplier;
     const usedLetters = this.getUsedFirstLetters();
-
     for (const ps of this.pendingSpawns) {
       usedLetters.add(ps.enemy.word[0]);
     }
 
-    for (const st of this.spawnTimers) {
-      if (this.elapsedTime < st.config.unlockTime) continue;
+    const currentInterval = this.getCurrentSpawnInterval();
+    const rampT = Math.min(this.elapsedTime / DIFFICULTY_RAMP_DURATION, 1);
+    const minActive = Math.round(MIN_ACTIVE_ENEMIES_START + (MIN_ACTIVE_ENEMIES_END - MIN_ACTIVE_ENEMIES_START) * rampT);
+    const activeCount = this.enemies.length + this.pendingSpawns.length;
 
-      const timeSinceUnlock = this.elapsedTime - st.config.unlockTime;
-      const rampT = Math.min(timeSinceUnlock / DIFFICULTY_RAMP_DURATION, 1);
-      const currentInterval =
-        st.config.baseInterval + (st.config.minInterval - st.config.baseInterval) * rampT;
+    if (activeCount < minActive) {
+      this.spawnTimer = currentInterval;
+    } else {
+      this.spawnTimer += deltaTime * 1000;
+    }
 
-      st.timer += deltaTime * 1000;
+    while (this.spawnTimer >= currentInterval) {
+      this.spawnTimer -= currentInterval;
 
-      if (st.timer >= currentInterval) {
-        if (st.config.type === 'speed') {
-          this.enqueueSpeedBurst(canvas, targetX, targetY, speedMult, usedLetters);
-          st.timer = 0;
-          continue;
-        }
+      const type = this.pickEnemyType();
 
-        const word = this.getWordForType(st.config.type, usedLetters);
-        if (!word) continue;
-
-        const wordsForType = st.config.type === 'sniper' ? SNIPER_WORDS : this.words;
-        const enemy = EnemyFactory.create(
-          st.config.type,
-          word,
-          canvas,
-          targetX,
-          targetY,
-          wordsForType,
-          speedMult
-        );
-        this.enemies.push(enemy);
-        this.startLoopSound(enemy);
-        usedLetters.add(word[0]);
-        st.timer = 0;
+      if (type === 'speed') {
+        this.enqueueSpeedBurst(canvas, targetX, targetY, speedMult, usedLetters);
+        continue;
       }
+
+      const word = this.getWordForType(type, usedLetters);
+      if (!word) continue;
+
+      const wordsForType = type === 'sniper' ? SNIPER_WORDS : this.words;
+      const enemy = EnemyFactory.create(
+        type, word, canvas, targetX, targetY, wordsForType, speedMult, this.rng
+      );
+      this.enemies.push(enemy);
+      this.startLoopSound(enemy);
+      usedLetters.add(word[0]);
     }
 
     this.tickPendingSpawns(deltaTime);
@@ -228,14 +246,16 @@ export class EnemyManager {
     usedLetters: Set<string>
   ): void {
     const { min, max } = EnemyFactory.getSpeedRange('speed', speedMult);
-    const cornerIndex = Math.floor(Math.random() * 4);
+    const cornerIndex = this.rng.nextInt(0, 4);
 
     let lastEnemy: Enemy | null = null;
     for (let i = 0; i < SPEED_BURST_COUNT; i++) {
       const word = this.getWordForType('speed', usedLetters);
       if (!word) break;
 
-      const enemy = SpeedNail.spawnFromCorner(word, canvas, targetX, targetY, min, max, cornerIndex);
+      const enemy = SpeedNail.spawnFromCorner(
+        word, canvas, targetX, targetY, min, max, cornerIndex, this.rng
+      );
       usedLetters.add(word[0]);
       lastEnemy = enemy;
 
@@ -282,7 +302,6 @@ export class EnemyManager {
     for (const enemy of this.enemies) {
       enemy.update(deltaTime, { x: targetX, y: targetY });
 
-
       if (enemy instanceof Sniper && enemy.pendingSpawns.length > 0) {
         this.onSniperShoot?.();
         for (const child of enemy.pendingSpawns) {
@@ -308,7 +327,6 @@ export class EnemyManager {
 
   // ── Unique first-letter helpers ─────────────────────────────────
 
-  /** Returns the set of first letters used by all active (targetable) enemies */
   private getUsedFirstLetters(): Set<string> {
     const used = new Set<string>();
     for (const e of this.enemies) {
@@ -319,28 +337,21 @@ export class EnemyManager {
     return used;
   }
 
-  /**
-   * Attempt to add a child enemy (from Sniper) ensuring its
-   * first letter is unique. If the child's current word conflicts, try to
-   * reassign it from the given word pool. If no free letter exists, discard.
-   */
   private addChildWithUniqueLetter(
     child: Enemy,
     wordPool: string[],
     usedLetters: Set<string>
   ): void {
     if (!usedLetters.has(child.word[0])) {
-      // First letter is free – add as-is
       this.enemies.push(child);
       usedLetters.add(child.word[0]);
       return;
     }
 
-    // Try to reassign to a word with a free first letter
     const available = wordPool.filter(w => !usedLetters.has(w[0]));
-    if (available.length === 0) return; // no free letter – discard child
+    if (available.length === 0) return;
 
-    const newWord = available[Math.floor(Math.random() * available.length)];
+    const newWord = available[this.rng.nextInt(0, available.length)];
     child.word = newWord;
     child.typed = '';
     this.enemies.push(child);
@@ -349,11 +360,6 @@ export class EnemyManager {
 
   // ── Word selection ───────────────────────────────────────────────
 
-  /**
-   * Pick a random word for the given enemy type whose first letter is NOT
-   * already used by an active on-screen enemy. Returns `null` when every
-   * available first letter is already taken.
-   */
   private getWordForType(type: string, usedLetters: Set<string>): string | null {
     let filteredWords: string[];
     switch (type) {
@@ -372,11 +378,10 @@ export class EnemyManager {
     }
     if (filteredWords.length === 0) filteredWords = this.words;
 
-    // Keep only words whose first letter isn't already on screen
     const available = filteredWords.filter(w => !usedLetters.has(w[0]));
     if (available.length === 0) return null;
 
-    return available[Math.floor(Math.random() * available.length)];
+    return available[this.rng.nextInt(0, available.length)];
   }
 
   // ── Loop sound helpers ─────────────────────────────────────────────
@@ -411,7 +416,6 @@ export class EnemyManager {
 
   // ── HUD rendering ────────────────────────────────────────────────
 
-  /** Format seconds as M:SS */
   static formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -419,7 +423,6 @@ export class EnemyManager {
   }
 
   renderSurvivalUI(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
-    // Always show elapsed time (top-right)
     ctx.font = `bold 42px "${FONT_DEFAULT}", monospace`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
@@ -439,22 +442,18 @@ export class EnemyManager {
       20
     );
 
-    // Grace period announcement with smooth fade-out
-    const FADE_OUT_DURATION = 1.5; // seconds to fade out after grace period
+    const FADE_OUT_DURATION = 1.5;
     const fadeEnd = GRACE_PERIOD + FADE_OUT_DURATION;
 
     if (this.elapsedTime < fadeEnd) {
       let alpha: number;
       if (this.elapsedTime < GRACE_PERIOD) {
-        // During grace period: gently dim from 1.0 → 0.6
         alpha = 1 - this.graceProgress * 0.4;
       } else {
-        // After grace period: smoothly fade from 0.6 → 0
         const fadeProgress = (this.elapsedTime - GRACE_PERIOD) / FADE_OUT_DURATION;
         alpha = 0.6 * (1 - fadeProgress);
       }
 
-      // Also drift the text upward during fade-out for a polished feel
       const baseY = canvasHeight / 2 - 180;
       const drift = this.elapsedTime >= GRACE_PERIOD
         ? ((this.elapsedTime - GRACE_PERIOD) / FADE_OUT_DURATION) * 30

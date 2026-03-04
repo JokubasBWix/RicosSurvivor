@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { SeededRNG } from '../utils/SeededRNG';
 import { FONT_TANK } from '../game/FontLoader';
 import axeImg from '../assets/images/axe-generic.png';
 
@@ -118,17 +119,19 @@ export class TankNail extends BaseEnemy {
     targetX: number,
     targetY: number,
     speedMin: number = 20,
-    speedMax: number = 35
+    speedMax: number = 35,
+    rng?: SeededRNG
   ): TankNail {
+    const rand = rng ? () => rng.next() : Math.random;
     const margin = 60;
-    const left = Math.random() < 0.5;
+    const left = rand() < 0.5;
     const x = left ? -margin : canvas.width + margin;
-    const y = Math.random() * canvas.height;
+    const y = rand() * canvas.height;
 
     const dx = targetX - x;
     const dy = targetY - y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const speed = speedMin + rand() * (speedMax - speedMin);
     const velocity: Velocity = dist > 0
       ? { x: (dx / dist) * speed, y: (dy / dist) * speed }
       : { x: speed, y: 0 };
@@ -142,8 +145,9 @@ export class TankNail extends BaseEnemy {
     targetX: number,
     targetY: number,
     speedMin: number = 20,
-    speedMax: number = 35
+    speedMax: number = 35,
+    rng?: SeededRNG
   ): TankNail {
-    return TankNail.spawnFromSide(word, canvas, targetX, targetY, speedMin, speedMax);
+    return TankNail.spawnFromSide(word, canvas, targetX, targetY, speedMin, speedMax, rng);
   }
 }

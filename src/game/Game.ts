@@ -104,7 +104,7 @@ export class Game {
     this.ctx = canvas.getContext('2d')!;
 
     this.treeStump = new TreeStump(canvas);
-    this.enemyManager = new EnemyManager(words);
+    this.enemyManager = new EnemyManager(words, Date.now());
     this.enemyManager.onSniperShoot = () => this.sound.playSniperShoot();
     this.enemyManager.onSpawnerSpawn = () => this.sound.playSpawnerSpawn();
     this.enemyManager.onTankSpin = () => this.sound.startTankSpinLoop();

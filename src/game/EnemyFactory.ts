@@ -1,4 +1,5 @@
 import { Enemy, EnemyType, Position } from '../types';
+import { SeededRNG } from '../utils/SeededRNG';
 import { Nail } from '../entities/Nail';
 import { ZigzagNail } from '../entities/ZigzagNail';
 import { StalkerNail } from '../entities/StalkerNail';
@@ -28,26 +29,27 @@ export class EnemyFactory {
     targetX: number,
     targetY: number,
     words: string[] = [],
-    speedMultiplier: number = 1.0
+    speedMultiplier: number = 1.0,
+    rng?: SeededRNG
   ): Enemy {
     const base = DEFAULT_SPEEDS[type];
     const min = base.min * speedMultiplier;
     const max = base.max * speedMultiplier;
     switch (type) {
       case 'nail':
-        return Nail.spawn360(word, canvas, targetX, targetY, min, max);
+        return Nail.spawn360(word, canvas, targetX, targetY, min, max, rng);
       case 'zigzag':
-        return ZigzagNail.spawn360(word, canvas, targetX, targetY, min, max);
+        return ZigzagNail.spawn360(word, canvas, targetX, targetY, min, max, rng);
       case 'stalker':
-        return StalkerNail.spawn360(word, canvas, targetX, targetY, min, max);
+        return StalkerNail.spawn360(word, canvas, targetX, targetY, min, max, rng);
       case 'tank':
-        return TankNail.spawn360(word, canvas, targetX, targetY, min, max);
+        return TankNail.spawn360(word, canvas, targetX, targetY, min, max, rng);
       case 'speed':
-        return SpeedNail.spawn360(word, canvas, targetX, targetY, min, max);
+        return SpeedNail.spawn360(word, canvas, targetX, targetY, min, max, rng);
       case 'sniper':
-        return Sniper.spawn360(word, canvas, targetX, targetY, min, max, words);
+        return Sniper.spawn360(word, canvas, targetX, targetY, min, max, words, rng);
       default:
-        return Nail.spawn360(word, canvas, targetX, targetY, min, max);
+        return Nail.spawn360(word, canvas, targetX, targetY, min, max, rng);
     }
   }
 
@@ -57,7 +59,8 @@ export class EnemyFactory {
     spawnPos: Position,
     targetPos: Position,
     words: string[] = [],
-    speedMultiplier: number = 1.0
+    speedMultiplier: number = 1.0,
+    rng?: SeededRNG
   ): Enemy {
     const dx = targetPos.x - spawnPos.x;
     const dy = targetPos.y - spawnPos.y;
@@ -65,7 +68,8 @@ export class EnemyFactory {
     const base = DEFAULT_SPEEDS[type];
     const min = base.min * speedMultiplier;
     const max = base.max * speedMultiplier;
-    const speed = min + Math.random() * (max - min);
+    const rand = rng ? () => rng.next() : Math.random;
+    const speed = min + rand() * (max - min);
     const velocity = distance > 0
       ? { x: (dx / distance) * speed, y: (dy / distance) * speed }
       : { x: 0, y: -speed };

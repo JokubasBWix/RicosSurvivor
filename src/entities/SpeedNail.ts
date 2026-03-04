@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { SeededRNG } from '../utils/SeededRNG';
 import circularSawImg from '../assets/images/CircuralSaw.png';
 
 const SPIN_RATE = 10;
@@ -144,8 +145,10 @@ export class SpeedNail extends BaseEnemy {
     targetY: number,
     speedMin: number = 100,
     speedMax: number = 140,
-    cornerIndex?: number
+    cornerIndex?: number,
+    rng?: SeededRNG
   ): SpeedNail {
+    const rand = rng ? () => rng.next() : Math.random;
     const corners: Position[] = [
       { x: CORNER_MARGIN, y: CORNER_MARGIN },
       { x: canvas.width - CORNER_MARGIN, y: CORNER_MARGIN },
@@ -153,12 +156,12 @@ export class SpeedNail extends BaseEnemy {
       { x: canvas.width - CORNER_MARGIN, y: canvas.height - CORNER_MARGIN },
     ];
 
-    const corner = corners[cornerIndex ?? Math.floor(Math.random() * corners.length)];
+    const corner = corners[cornerIndex ?? Math.floor(rand() * corners.length)];
 
     const dx = targetX - corner.x;
     const dy = targetY - corner.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const speed = speedMin + rand() * (speedMax - speedMin);
     const velocity: Velocity = dist > 0
       ? { x: (dx / dist) * speed, y: (dy / dist) * speed }
       : { x: speed, y: 0 };
@@ -172,8 +175,9 @@ export class SpeedNail extends BaseEnemy {
     targetX: number,
     targetY: number,
     speedMin: number = 100,
-    speedMax: number = 140
+    speedMax: number = 140,
+    rng?: SeededRNG
   ): SpeedNail {
-    return SpeedNail.spawnFromCorner(word, canvas, targetX, targetY, speedMin, speedMax);
+    return SpeedNail.spawnFromCorner(word, canvas, targetX, targetY, speedMin, speedMax, undefined, rng);
   }
 }
