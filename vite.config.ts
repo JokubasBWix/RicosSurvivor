@@ -4,6 +4,20 @@ import path from 'node:path';
 
 const LEADERBOARD_FILE = path.resolve(__dirname, 'leaderboard.json');
 
+function readEntries(): any[] {
+  try {
+    return fs.existsSync(LEADERBOARD_FILE)
+      ? JSON.parse(fs.readFileSync(LEADERBOARD_FILE, 'utf-8'))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeEntries(entries: any[]): void {
+  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries, null, 2), 'utf-8');
+}
+
 /** Vite plugin that serves a tiny JSON-file–backed leaderboard API. */
 function leaderboardApi(): Plugin {
   return {
@@ -12,20 +26,11 @@ function leaderboardApi(): Plugin {
       server.middlewares.use('/api/leaderboard', (req, res) => {
         res.setHeader('Content-Type', 'application/json');
 
-        // --- GET: return current entries ---
         if (req.method === 'GET') {
-          try {
-            const data = fs.existsSync(LEADERBOARD_FILE)
-              ? fs.readFileSync(LEADERBOARD_FILE, 'utf-8')
-              : '[]';
-            res.end(data);
-          } catch {
-            res.end('[]');
-          }
+          res.end(JSON.stringify(readEntries()));
           return;
         }
 
-        // --- POST / PUT / DELETE: read body then act ---
         let body = '';
         req.on('data', (chunk: Buffer) => {
           body += chunk.toString();
@@ -33,17 +38,30 @@ function leaderboardApi(): Plugin {
         req.on('end', () => {
           try {
             if (req.method === 'DELETE') {
-              fs.writeFileSync(LEADERBOARD_FILE, '[]', 'utf-8');
+              writeEntries([]);
               res.end('[]');
               return;
             }
 
-            // POST – replace entire leaderboard with the payload
             if (req.method === 'POST') {
-              const entries = JSON.parse(body);
-              const json = JSON.stringify(entries, null, 2);
-              fs.writeFileSync(LEADERBOARD_FILE, json, 'utf-8');
-              res.end(json);
+              const { name, score, survivalTime } = JSON.parse(body);
+              const entries = readEntries();
+              const key = name.toLowerCase();
+              const existing = entries.find((e: any) => e.name.toLowerCase() === key);
+
+              if (existing) {
+                if (score > existing.score || survivalTime > existing.survivalTime) {
+                  existing.score = Math.max(existing.score, score);
+                  existing.survivalTime = Math.max(existing.survivalTime, survivalTime);
+                  existing.date = new Date().toISOString();
+                }
+              } else {
+                entries.push({ name, score, survivalTime, date: new Date().toISOString() });
+              }
+
+              entries.sort((a: any, b: any) => b.score - a.score);
+              writeEntries(entries);
+              res.end(JSON.stringify(entries));
               return;
             }
 
