@@ -16,15 +16,15 @@ interface SurvivalSpawnConfig {
 }
 
 const SURVIVAL_CONFIG: SurvivalSpawnConfig[] = [
-  { type: 'nail',    unlockTime: 5,   baseInterval: 2500, minInterval: 600 },
-  { type: 'zigzag',  unlockTime: 30,  baseInterval: 4000, minInterval: 1200 },
-  { type: 'speed',   unlockTime: 60,  baseInterval: 3500, minInterval: 1000 },
-  { type: 'tank',    unlockTime: 75,  baseInterval: 5000, minInterval: 1800 },
-  { type: 'stalker', unlockTime: 90,  baseInterval: 8000, minInterval: 3000 },
-  { type: 'sniper',  unlockTime: 100, baseInterval: 8000, minInterval: 3000 },
+  { type: 'nail',    unlockTime: 1,   baseInterval: 2500, minInterval: 1500 },
+  { type: 'zigzag',  unlockTime: 10,  baseInterval: 4000, minInterval: 2000 },
+  { type: 'speed',   unlockTime: 15,  baseInterval: 3500, minInterval: 3500 },
+  { type: 'tank',    unlockTime: 20,  baseInterval: 5000, minInterval: 4500 },
+  { type: 'stalker', unlockTime: 25,  baseInterval: 8000, minInterval: 3000 },
+  { type: 'sniper',  unlockTime: 35, baseInterval: 8000, minInterval: 5000 },
 ];
 
-const GRACE_PERIOD = 5;            // seconds before first enemy spawns
+const GRACE_PERIOD = 1;            // seconds before first enemy spawns
 const SPEED_RAMP_DURATION = 180;   // seconds to reach ~2x speed
 const DIFFICULTY_RAMP_DURATION = 180; // seconds over which intervals shrink to minimum
 
