@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { SeededRNG } from '../utils/SeededRNG';
 import nailImg from '../assets/images/nail.png';
 
 export class Nail extends BaseEnemy {
@@ -66,9 +67,10 @@ export class Nail extends BaseEnemy {
     targetX: number,
     targetY: number,
     speedMin: number = 45,
-    speedMax: number = 80
+    speedMax: number = 80,
+    rng?: SeededRNG
   ): Nail {
-    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax);
+    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax, rng);
     return new Nail(word, position, velocity);
   }
 }

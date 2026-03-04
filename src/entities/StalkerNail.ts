@@ -1,5 +1,6 @@
 import { Position, Velocity } from '../types';
 import { BaseEnemy } from './BaseEnemy';
+import { SeededRNG } from '../utils/SeededRNG';
 import powerToolImg from '../assets/images/power-tool-generic.png';
 
 const CHARGE_DISTANCE = 180;
@@ -153,9 +154,10 @@ export class StalkerNail extends BaseEnemy {
     targetX: number,
     targetY: number,
     speedMin: number = 20,
-    speedMax: number = 40
+    speedMax: number = 40,
+    rng?: SeededRNG
   ): StalkerNail {
-    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax);
+    const { position, velocity } = BaseEnemy.computeSpawn360(canvas, targetX, targetY, speedMin, speedMax, rng);
     return new StalkerNail(word, position, velocity);
   }
 }
