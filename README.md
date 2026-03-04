@@ -44,17 +44,17 @@ public/
 
 1. Install dependencies:
 ```bash
-yarn install
+npm install
 ```
 
 2. Run dev server:
 ```bash
-yarn dev
+vite
 ```
 
 3. Build for production:
 ```bash
-yarn build
+tsc && vite build
 ```
 
 ## Deploy to Vercel
@@ -78,7 +78,6 @@ git push -u origin main
 
 - **TypeScript** - Type safety
 - **Vite** - Fast build tool and dev server
-- **Yarn** - Package management
 - **HTML5 Canvas** - Rendering
 - **ES Modules** - Modern JavaScript
 
