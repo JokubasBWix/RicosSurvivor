@@ -57,9 +57,12 @@ export class Sniper extends BaseEnemy {
     const angle = Math.atan2(position.y - playerPosition.y, position.x - playerPosition.x);
     const stopDistance = 500 + Math.random() * 150;
     const margin = 100;
+    // Derive game area from player position (player is always at canvas center)
+    const gameWidth = playerPosition.x * 2;
+    const gameHeight = playerPosition.y * 2;
     this.stopPosition = {
-      x: Math.max(margin, Math.min(window.innerWidth - margin, playerPosition.x + Math.cos(angle) * stopDistance)),
-      y: Math.max(margin, Math.min(window.innerHeight - margin, playerPosition.y + Math.sin(angle) * stopDistance))
+      x: Math.max(margin, Math.min(gameWidth - margin, playerPosition.x + Math.cos(angle) * stopDistance)),
+      y: Math.max(margin, Math.min(gameHeight - margin, playerPosition.y + Math.sin(angle) * stopDistance))
     };
 
     if (!Sniper.image) {

@@ -9,10 +9,12 @@ export class LeafProjectile {
   public arrived: boolean = false;
   public targetEnemy: Enemy;
   private el: HTMLImageElement;
+  private canvas: HTMLCanvasElement;
 
-  constructor(start: Position, targetEnemy: Enemy) {
+  constructor(start: Position, targetEnemy: Enemy, canvas: HTMLCanvasElement) {
     this.position = { ...start };
     this.targetEnemy = targetEnemy;
+    this.canvas = canvas;
 
     this.el = document.createElement('img');
     this.el.src = leafGif;
@@ -53,8 +55,15 @@ export class LeafProjectile {
     const angle = Math.atan2(ty - this.position.y, tx - this.position.x);
     const deg = (angle * 180) / Math.PI + 180;
 
+    // Convert canvas coordinates → CSS viewport coordinates.
+    // The canvas buffer may differ from its CSS display size due to zoom compensation.
+    const rect = this.canvas.getBoundingClientRect();
+    const cssX = this.position.x * (rect.width / this.canvas.width);
+    const cssY = this.position.y * (rect.height / this.canvas.height);
+    const visualScale = rect.width / this.canvas.width;
+
     this.el.style.transform =
-      `translate(${this.position.x}px, ${this.position.y}px) translate(-50%, -50%) rotate(${deg}deg)`;
+      `translate(${cssX}px, ${cssY}px) translate(-50%, -50%) rotate(${deg}deg) scale(${visualScale})`;
   }
 
   destroy(): void {

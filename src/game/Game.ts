@@ -88,6 +88,14 @@ export class Game {
   private hudEntranceProgress: number = 1;
   private static readonly HUD_ENTRANCE_DURATION = 0.8;
 
+  // Zoom compensation – prevents cheating by zooming out the browser.
+  // Tracks the browser outer dimensions to distinguish zoom from genuine resize.
+  // Zoom changes inner dimensions only; resize changes outer dimensions too.
+  private baseInnerWidth: number;
+  private baseInnerHeight: number;
+  private lastOuterWidth: number;
+  private lastOuterHeight: number;
+
   // Debug mode
   private debugSelectedType: EnemyType = 'nail';
   private debugMessage: string = '';
@@ -120,7 +128,7 @@ export class Game {
         this.sound.playCorrectLetter();
         this.treeStump.triggerAttack();
         this.leafProjectiles.push(
-          new LeafProjectile({ ...this.treeStump.position }, enemy)
+          new LeafProjectile({ ...this.treeStump.position }, enemy, this.canvas)
         );
         enemy.typedScale = 1.35;
         this.screenShake.trigger(1.5);
@@ -157,6 +165,12 @@ export class Game {
       muteBtn.textContent = this.sound.muted ? '🔇' : '🔊';
     }
 
+    // Initialize zoom compensation baseline (must be before setupCanvas)
+    this.baseInnerWidth = window.innerWidth;
+    this.baseInnerHeight = window.innerHeight;
+    this.lastOuterWidth = window.outerWidth;
+    this.lastOuterHeight = window.outerHeight;
+
     this.setupCanvas();
     this.setupEventListeners();
     this.setupStartScreenListeners();
@@ -169,8 +183,31 @@ export class Game {
   }
 
   private setupCanvas(): void {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    const outerW = window.outerWidth;
+    const outerH = window.outerHeight;
+
+    // Detect genuine window resize vs browser zoom.
+    // Zoom only changes innerWidth/Height while outerWidth/Height stays constant.
+    // A genuine resize (drag, maximize, monitor switch) changes outerWidth/Height.
+    const outerWChanged = Math.abs(outerW - this.lastOuterWidth) > 5;
+    const outerHChanged = Math.abs(outerH - this.lastOuterHeight) > 5;
+
+    if (outerWChanged || outerHChanged) {
+      // Genuine resize — scale base inner dimensions proportionally
+      if (outerWChanged && this.lastOuterWidth > 0) {
+        this.baseInnerWidth = Math.round(this.baseInnerWidth * (outerW / this.lastOuterWidth));
+      }
+      if (outerHChanged && this.lastOuterHeight > 0) {
+        this.baseInnerHeight = Math.round(this.baseInnerHeight * (outerH / this.lastOuterHeight));
+      }
+      this.lastOuterWidth = outerW;
+      this.lastOuterHeight = outerH;
+    }
+    // If outer didn't change → zoom → base dimensions stay the same,
+    // so the game area remains constant and CSS stretches the canvas to fill.
+
+    this.canvas.width = this.baseInnerWidth;
+    this.canvas.height = this.baseInnerHeight;
   }
 
   private setupStartScreenListeners(): void {
@@ -260,9 +297,12 @@ export class Game {
 
       if (!this.enemyManager.debugMode) return;
 
+      // Convert CSS coordinates to canvas coordinates (may differ due to zoom compensation)
       const rect = this.canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+      const scaleX = this.canvas.width / rect.width;
+      const scaleY = this.canvas.height / rect.height;
+      const clickX = (e.clientX - rect.left) * scaleX;
+      const clickY = (e.clientY - rect.top) * scaleY;
 
       this.enemyManager.spawnAtPosition(
         this.debugSelectedType,
@@ -516,6 +556,10 @@ export class Game {
     if (!this.enemyManager.debugMode && this.enemyManager.checkCollisions(this.treeStump)) {
       this.gameState = GameState.DYING;
       this.treeStump.setDead();
+
+      // Remove any in-flight leaf projectiles (their DOM images)
+      for (const proj of this.leafProjectiles) proj.destroy();
+      this.leafProjectiles = [];
 
       // Death animation parameters
       this.deathFreezeTimer = 0.08;   // 80ms hit-freeze
@@ -974,6 +1018,7 @@ export class Game {
     this.score = 0;
     this.shatterEffects = [];
     this.bigExplosionEffects = [];
+    for (const proj of this.leafProjectiles) proj.destroy();
     this.leafProjectiles = [];
     this.knockbacks.clear();
     this.impactEffects = [];
