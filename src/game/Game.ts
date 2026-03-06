@@ -587,8 +587,9 @@ export class Game {
       }
     }
 
+    const canvasRect = this.canvas.getBoundingClientRect();
     for (const proj of this.leafProjectiles) {
-      proj.update(deltaTime);
+      proj.update(deltaTime, canvasRect);
       if (proj.arrived) {
         this.sound.playImpact();
         this.applyKnockback(proj.targetEnemy);

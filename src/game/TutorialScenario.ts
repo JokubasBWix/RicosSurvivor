@@ -246,8 +246,9 @@ export class TutorialScenario {
   }
 
   private updateProjectiles(deltaTime: number): void {
+    const canvasRect = this.ctx.canvas.getBoundingClientRect();
     for (const proj of this.leafProjectiles) {
-      proj.update(deltaTime);
+      proj.update(deltaTime, canvasRect);
       if (proj.arrived) {
         this.ctx.sound.playImpact();
         this.applyKnockback(proj.targetEnemy);

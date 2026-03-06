@@ -28,7 +28,7 @@ export class LeafProjectile {
     this.syncTransform();
   }
 
-  update(deltaTime: number): void {
+  update(deltaTime: number, canvasRect?: DOMRect): void {
     if (this.arrived) return;
 
     const tx = this.targetEnemy.position.x;
@@ -46,18 +46,16 @@ export class LeafProjectile {
     this.position.x += (dx / distance) * SPEED * deltaTime;
     this.position.y += (dy / distance) * SPEED * deltaTime;
 
-    this.syncTransform();
+    this.syncTransform(canvasRect);
   }
 
-  private syncTransform(): void {
+  private syncTransform(canvasRect?: DOMRect): void {
     const tx = this.targetEnemy.position.x;
     const ty = this.targetEnemy.position.y;
     const angle = Math.atan2(ty - this.position.y, tx - this.position.x);
     const deg = (angle * 180) / Math.PI + 180;
 
-    // Convert canvas coordinates → CSS viewport coordinates.
-    // The canvas buffer may differ from its CSS display size due to zoom compensation.
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = canvasRect ?? this.canvas.getBoundingClientRect();
     const cssX = this.position.x * (rect.width / this.canvas.width);
     const cssY = this.position.y * (rect.height / this.canvas.height);
     const visualScale = rect.width / this.canvas.width;
