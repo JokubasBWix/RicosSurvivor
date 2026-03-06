@@ -1,4 +1,5 @@
 import { defineConfig, Plugin } from 'vite';
+import { resolve } from 'node:path';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -79,4 +80,12 @@ function leaderboardApi(): Plugin {
 
 export default defineConfig({
   plugins: [leaderboardApi()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        tutorial: resolve(__dirname, 'tutorial.html'),
+      },
+    },
+  },
 });
