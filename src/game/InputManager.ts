@@ -35,6 +35,12 @@ export class InputManager {
         return;
       }
 
+      if (e.key === ' ' && this.lockedEnemy) {
+        e.preventDefault();
+        this.dropLock();
+        return;
+      }
+
       if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
 
       const key = e.key.toLowerCase();
@@ -63,7 +69,7 @@ export class InputManager {
       }
     } else {
       const candidates = this.enemies.filter(
-        (e) => !e.isDestroyed && !e.wordCompleted && e.word[0] === key
+        (e) => !e.isDestroyed && !e.wordCompleted && e.word[e.typed.length] === key
       );
       if (candidates.length === 0) {
         this.onWrongLetter?.();
@@ -75,11 +81,12 @@ export class InputManager {
       });
 
       this.lockedEnemy = target;
-      this.typedIndex = 1;
-      target.typed = target.word.substring(0, 1);
+      target.isTargeted = true;
+      this.typedIndex = target.typed.length + 1;
+      target.typed = target.word.substring(0, this.typedIndex);
       this.onCorrectLetter?.(target);
 
-      if (target.word.length === 1) {
+      if (this.typedIndex >= target.word.length) {
         this.completeWord(target);
         this.unlock();
       }
@@ -90,9 +97,18 @@ export class InputManager {
     enemy.wordCompleted = true;
   }
 
+  private dropLock(): void {
+    if (this.lockedEnemy) {
+      this.lockedEnemy.isTargeted = false;
+    }
+    this.lockedEnemy = null;
+    this.typedIndex = 0;
+  }
+
   private unlock(): void {
     if (this.lockedEnemy) {
       this.lockedEnemy.typed = '';
+      this.lockedEnemy.isTargeted = false;
     }
     this.lockedEnemy = null;
     this.typedIndex = 0;

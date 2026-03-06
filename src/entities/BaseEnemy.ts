@@ -21,6 +21,7 @@ export abstract class BaseEnemy implements Enemy {
   public wordCompleted: boolean = false;
   public typedScale: number = 1;
   public isMinion: boolean = false;
+  public isTargeted: boolean = false;
   protected fontFamily: string = FONT_DEFAULT;
   protected fontSize: number = 16;
   protected displayUppercase: boolean = false;
@@ -63,14 +64,12 @@ export abstract class BaseEnemy implements Enemy {
   protected renderWord(ctx: CanvasRenderingContext2D): void {
     if (this.wordCompleted) return;
 
-    const isLocked = this.typed.length > 0;
     const xform = this.displayUppercase ? (s: string) => s.toUpperCase() : (s: string) => s;
     const typedPart = xform(this.word.substring(0, this.typed.length));
     const remaining = xform(this.word.substring(this.typed.length));
 
     ctx.save();
 
-    // Set font before measuring so we can clamp before applying the scale transform
     ctx.font = `${this.fontSize}px "${this.fontFamily}", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -81,10 +80,9 @@ export abstract class BaseEnemy implements Enemy {
     const padX = 6;
     const padY = 4;
 
-    const pillW = (isLocked ? fullMetrics.width : remainingMetrics.width) + padX * 2;
+    const pillW = remainingMetrics.width + padX * 2;
     const pillH = this.fontSize + padY * 2;
 
-    // Compute word center, then clamp so the pill stays fully on-screen
     let wordX = this.position.x;
     let wordY = this.position.y - this.radius - 20;
 
@@ -94,7 +92,6 @@ export abstract class BaseEnemy implements Enemy {
     wordX = Math.max(pillW / 2 + screenMargin, Math.min(cw - pillW / 2 - screenMargin, wordX));
     wordY = Math.max(this.fontSize / 2 + padY + screenMargin, Math.min(ch - this.fontSize / 2 - padY - screenMargin, wordY));
 
-    // Apply scale pop around the (clamped) word center
     ctx.translate(wordX, wordY);
     ctx.scale(this.typedScale, this.typedScale);
     ctx.translate(-wordX, -wordY);
@@ -102,7 +99,7 @@ export abstract class BaseEnemy implements Enemy {
     const pillX = wordX - pillW / 2;
     const pillY = wordY - this.fontSize / 2 - padY;
 
-    if (isLocked) {
+    if (this.isTargeted) {
       ctx.fillStyle = BG_LOCKED;
       ctx.strokeStyle = BG_LOCKED_BORDER;
       ctx.lineWidth = 1;
@@ -117,21 +114,8 @@ export abstract class BaseEnemy implements Enemy {
       ctx.fill();
     }
 
-    if (isLocked) {
-      const halfFullWidth = fullMetrics.width / 2;
-      const typedX = wordX - halfFullWidth + typedMetrics.width / 2;
-
-      ctx.fillStyle = LOCKED_TYPED_COLOR;
-      ctx.fillText(typedPart, typedX, wordY);
-
-      const remainingX = wordX - halfFullWidth + typedMetrics.width + remainingMetrics.width / 2;
-
-      ctx.fillStyle = LOCKED_REMAINING_COLOR;
-      ctx.fillText(remaining, remainingX, wordY);
-    } else {
-      ctx.fillStyle = UNLOCKED_TEXT_COLOR;
-      ctx.fillText(remaining, wordX, wordY);
-    }
+    ctx.fillStyle = this.isTargeted ? LOCKED_REMAINING_COLOR : UNLOCKED_TEXT_COLOR;
+    ctx.fillText(remaining, wordX, wordY);
 
     ctx.restore();
   }
