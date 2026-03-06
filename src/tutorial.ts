@@ -59,6 +59,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const embed = params.has('embed');
 
-  const game = new TutorialGame(canvas, [scenario], { muted: embed });
+  const game = new TutorialGame(canvas, [scenario], { muted: embed, embedded: embed });
   game.start();
 });

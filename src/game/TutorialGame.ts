@@ -13,15 +13,18 @@ export class TutorialGame {
   private sound: SoundManager = new SoundManager();
   private scenarios: TutorialScenario[] = [];
   private lastTime: number = 0;
+  private embedded: boolean;
 
   private baseInnerWidth: number;
   private baseInnerHeight: number;
   private lastOuterWidth: number;
   private lastOuterHeight: number;
 
-  constructor(canvas: HTMLCanvasElement, scenarioDefinitions: TutorialAction[][], options?: { muted?: boolean }) {
+  constructor(canvas: HTMLCanvasElement, scenarioDefinitions: TutorialAction[][], options?: { muted?: boolean; embedded?: boolean }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+
+    this.embedded = options?.embedded ?? false;
 
     if (options?.muted) {
       this.sound.setMuted(true);
@@ -87,7 +90,11 @@ export class TutorialGame {
 
   start(): void {
     this.lastTime = performance.now();
-    this.gameLoop(this.lastTime);
+    if (this.embedded) {
+      this.embeddedLoop();
+    } else {
+      this.gameLoop(this.lastTime);
+    }
   }
 
   private gameLoop = (currentTime: number): void => {
@@ -98,6 +105,17 @@ export class TutorialGame {
     this.render();
 
     requestAnimationFrame(this.gameLoop);
+  };
+
+  private embeddedLoop = (): void => {
+    const now = performance.now();
+    const deltaTime = Math.min((now - this.lastTime) / 1000, 0.1);
+    this.lastTime = now;
+
+    this.update(deltaTime);
+    this.render();
+
+    setTimeout(this.embeddedLoop, 16);
   };
 
   private update(deltaTime: number): void {
