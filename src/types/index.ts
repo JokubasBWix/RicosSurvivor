@@ -29,6 +29,7 @@ export interface Enemy extends Entity {
   wordCompleted: boolean;
   typedScale: number;
   isMinion: boolean;
+  isTargeted: boolean;
   checkCollision(player: { position: Position; radius: number }): boolean;
 }
 
